@@ -174,7 +174,7 @@ while True:
         is_correct = confidence >= 0.5
 
         color = GREEN if is_correct else RED
-        label = "CORRECT ✓" if is_correct else "INCORRECT ✗"
+        label = "CORRECT " if is_correct else "INCORRECT "
 
         # Specific tip based on angles
         if is_correct:
