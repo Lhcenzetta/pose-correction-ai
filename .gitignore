@@ -3,3 +3,7 @@ dataset
 visualize_output
 data-csv
 .env
+__pycache__
+*.pyc
+index.html
+main.py
