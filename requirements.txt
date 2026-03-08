@@ -8,3 +8,9 @@ dotenv
 
 opencv-python
 mediapipe
+
+
+
+fastapi
+SQLAlchemy
+psycopg2
