@@ -1,3 +1,5 @@
+from sqlalchemy.orm import relationship
+
 from db.database import Base
 from sqlalchemy import Column , String , Integer, Float
 
@@ -9,3 +11,5 @@ class User(Base):
      email = Column(String)
      hashedpassword = Column(String)
      created_at = Column(String)
+
+     session = relationship("Session", back_populates="user")
