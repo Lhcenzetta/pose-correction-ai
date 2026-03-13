@@ -14,3 +14,6 @@ mediapipe
 fastapi
 SQLAlchemy
 psycopg2
+bcrypt==4.3.0
+passlib[bcrypt]
+pydantic[email]

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import test
+from routers import manage_session,select_exercice,authontification
 from db.database import engine, Base
 from models.user import User
 from models.session import Session
@@ -10,7 +10,9 @@ app  = FastAPI()
 
 Base.metadata.create_all(bind=engine)
 
-app.include_router(test.router)
+app.include_router(authontification.router)
+app.include_router(manage_session.router)
+app.include_router(select_exercice.router)
 
 
 

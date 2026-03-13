@@ -8,7 +8,7 @@ class User(Base):
      id = Column(Integer, autoincrement=True , primary_key=True)
      first_name = Column(String)
      last_name = Column(String)
-     email = Column(String)
+     email = Column(String, unique=True)
      hashedpassword = Column(String)
      created_at = Column(String)
 
