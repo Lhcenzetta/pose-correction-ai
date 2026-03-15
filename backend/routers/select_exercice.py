@@ -1,13 +1,25 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException,status
 from sqlalchemy.orm import Session
-from routers.authontification import verfiy_token
+from schema.Exerciceschema import ExerciseCreate ,ExerciseBase,ExerciseResponse
+from routers.authontification import get_current_user, verfiy_token
 from db.database import get_db
-from schema import shcema
+from schema import UserSchema
 from models.exercices import Exercice
 router = APIRouter()
 
-@router.post("/select_exercice")
-def exercice_selected(exercie : shcema.Exerciceselected , db:Session = Depends(get_db)):
+
+@router.post("/", response_model=ExerciseResponse)
+def create_exercise(
+    exercie: ExerciseCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    existing_exercise = db.query(Exercice).filter(Exercice.name == exercie.name).first()
+    if existing_exercise:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An exercise with this name already exists.",
+        )
     if exercie.name == "Shoulder Abduction":
         description = "The elbow is a hinge joint in the upper limb formed by " \
         "the articulation of three bones: the humerus (upper arm bone), " \

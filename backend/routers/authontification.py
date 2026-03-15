@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from models.user import User
 from db.database import get_db
-from schema import shcema
+from schema import UserSchema
+
 load_dotenv()
 
 algorithme = "HS256"
@@ -39,8 +40,18 @@ def verfiy_token(cre: HTTPAuthorizationCredentials = Depends(barear_chema)):
         )
     return decode
 
+def get_current_user(token: dict = Depends(verfiy_token), db: Session = Depends(get_db)) -> User:
+    email = token.get("sub")
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    return user
+
 @router.post("/Signup", status_code=201)
-def create_account(user: shcema.CreateUser, db: Session = Depends(get_db)):
+def create_account(user: UserSchema.CreateUser, db: Session = Depends(get_db)):
     exist_user = db.query(User).filter(User.email == user.email).first()
     if exist_user:
         raise HTTPException(
@@ -63,7 +74,7 @@ def create_account(user: shcema.CreateUser, db: Session = Depends(get_db)):
     return new_user
 
 @router.post("/login")
-def login(user : shcema.loginUser ,db: Session = Depends(get_db)):
+def login(user : UserSchema.loginUser ,db: Session = Depends(get_db)):
     extist_user = db.query(User).filter(User.email == user.email).first()
     if not extist_user or not pwd_context.verify(user.password, extist_user.hashedpassword):
         raise HTTPException(
@@ -77,3 +88,8 @@ def login(user : shcema.loginUser ,db: Session = Depends(get_db)):
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+@router.get("/me", response_model=UserSchema.UserResponse)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Get the current user's information."""
+    return current_user
