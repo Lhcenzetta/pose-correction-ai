@@ -84,7 +84,7 @@ def get_session_feedback(
     feedbacks = db.query(Feedback).filter(Feedback.session_id == session_id).all()
     return feedbacks
 
-@router.get("/{feedback_id}", response_model=FeedbackResponse)
+@router.get("/{feedback_id} get_feedback", response_model=FeedbackResponse)
 def get_feedback(
     feedback_id: int,
     db: Session = Depends(get_db),
@@ -108,7 +108,7 @@ def get_feedback(
     
     return feedback
 
-@router.delete("/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{feedback_id}delete_feedback", status_code=status.HTTP_204_NO_CONTENT)
 def delete_feedback(
     feedback_id: int,
     db: Session = Depends(get_db),

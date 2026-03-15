@@ -89,7 +89,8 @@ def login(user : UserSchema.loginUser ,db: Session = Depends(get_db)):
         "token_type": "bearer"
     }
 
-@router.get("/me", response_model=UserSchema.UserResponse)
+@router.get("/me")
 def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """Get the current user's information."""
     return current_user
+
+

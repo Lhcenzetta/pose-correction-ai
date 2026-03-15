@@ -106,14 +106,12 @@ def process_pose_data(
     return session
 
 
-
-@router.get("/{session_id}", response_model=SessionResponse)
+@router.get("/{session_id} get_session", response_model=SessionResponse)
 def get_session(
     session_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get a specific session by ID."""
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if not session:
         raise HTTPException(
@@ -121,7 +119,7 @@ def get_session(
             detail="Session not found.",
         )
     
-    # Verify ownership
+    
     if session.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -133,13 +131,12 @@ def get_session(
 
 
 
-@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{session_id} delette session", status_code=status.HTTP_204_NO_CONTENT)
 def delete_session(
     session_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a session."""
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if not session:
         raise HTTPException(
@@ -147,7 +144,6 @@ def delete_session(
             detail="Session not found.",
         )
     
-    # Verify ownership
     if session.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
