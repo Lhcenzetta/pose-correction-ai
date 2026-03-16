@@ -44,3 +44,13 @@ def create_exercise(
     db.commit()
     db.refresh(new_exerice)
     return new_exerice
+
+
+@router.get("/exercises", response_model=list[ExerciseResponse])
+def get_all_exercises(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    exercises = db.query(Exercice).all()
+    return exercises  
+

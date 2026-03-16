@@ -6,7 +6,6 @@ class CreateUser(BaseModel):
     last_name: str
     email: EmailStr
     password: str
-    created_at: date
 
 class loginUser(BaseModel):
     email :EmailStr
