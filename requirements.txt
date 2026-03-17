@@ -12,8 +12,10 @@ mediapipe
 
 
 fastapi
+uvicorn
+python-jose[cryptography]
 SQLAlchemy
-psycopg2
+psycopg2-binary
 bcrypt==4.3.0
 passlib[bcrypt]
 pydantic[email]
@@ -21,4 +23,4 @@ pydantic[email]
 
 pytest 
 pytest-asyncio 
-httpx --break-system-packages
+httpx
