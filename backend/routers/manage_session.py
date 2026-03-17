@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from routers.authontification import get_current_user
-from schema.Sessionschema import SessionCreate, SessionResponse
+from schema.Sessionschema import SessionCreate, SessionResponse ,PoseFeatures
 from models.user import User
 from models.exercices import Exercice
 from models.session import Session as SessionModel
@@ -22,17 +22,10 @@ model  = tf.keras.models.load_model(os.getenv("shoulder_model"))
 with open(os.getenv("scale"), "rb") as f:
     scaler = pickle.load(f)
 
-# ── Per-session smoothing buffers ─────────────────────────────────
 _pred_buffers: dict[int, deque] = {}
 _lock = threading.Lock()
 
-# ── Input schema — matches exactly what your HTML sends ──────────
-class PoseFeatures(BaseModel):
-    features: list[float]          # 28 values: 24 coords + 4 angles
-    session_id: int                # frontend must include this
 
-
-# ── Inference ────────────────────────────────────────────────────
 def run_inference(session_id: int, features: list[float]):
     if len(features) != 28:
         raise ValueError(f"Expected 28 features, got {len(features)}")
@@ -48,11 +41,11 @@ def run_inference(session_id: int, features: list[float]):
 
     is_correct = confidence >= 0.5
 
-    # Extract angles from last 4 features
-    left_abd  = features[26]   # index 26 = leftAbduction
-    right_abd = features[27]   # index 27 = rightAbduction
+    
+    left_abd  = features[26]  
+    right_abd = features[27]
 
-    # Tip logic
+
     if is_correct:
         tip = f"Good! L:{left_abd:.0f}°  R:{right_abd:.0f}°"
     else:
@@ -68,7 +61,7 @@ def run_inference(session_id: int, features: list[float]):
     return confidence, is_correct, tip, left_abd, right_abd
 
 
-# ── Endpoints ─────────────────────────────────────────────────────
+
 
 @router.post("/session", response_model=SessionResponse)
 def create_session(
@@ -113,7 +106,7 @@ def process_pose(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Save rolling accuracy score
+    
     session.accuracy_score = round(confidence * 100, 2)
     session.end_time       = datetime.utcnow()
     db.commit()
@@ -127,8 +120,6 @@ def process_pose(
         "accuracy_score":  round(confidence * 100, 2),
     }
 
-
-# In your session router, update finalize_session:
 from models.feedback import Feedback
 
 def generate_feedback_comment(accuracy_score: float) -> str:
@@ -156,7 +147,6 @@ def finalize_session(
     session.status   = "completed"
     session.end_time = datetime.utcnow()
 
-    # ── Auto-generate feedback ────────────────────────────────
     existing = db.query(Feedback).filter(Feedback.session_id == session_id).first()
     if not existing and session.accuracy_score is not None:
         feedback = Feedback(
