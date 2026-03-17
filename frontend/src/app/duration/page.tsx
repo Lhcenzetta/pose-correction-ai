@@ -77,7 +77,7 @@ export default function DurationPage() {
         duration_seconds: selected * 60,
       }));
 
-      router.push('/session');
+      router.push(`/session/${session.id}`);
     } catch (e: any) {
       setError(e.message);
     } finally {

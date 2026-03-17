@@ -1,1 +1,40 @@
+version: '3.8'
+
 services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pose_correction_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      user: user
+      password: password
+      host: db
+      port: 5432
+      database: pose_correction_db
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

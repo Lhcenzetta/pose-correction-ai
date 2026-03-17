@@ -23,6 +23,7 @@ with open(os.getenv("scale"), "rb") as f:
     scaler = pickle.load(f)
 
 _pred_buffers: dict[int, deque] = {}
+_session_metrics: dict[int, dict] = {} # {session_id: {"sum": 0.0, "count": 0}}
 _lock = threading.Lock()
 
 
@@ -58,7 +59,7 @@ def run_inference(session_id: int, features: list[float]):
         else:
             tip = "Check your arm position"
 
-    return confidence, is_correct, tip, left_abd, right_abd
+    return confidence, is_correct, tip, left_abd, right_abd, raw_conf
 
 
 
@@ -98,26 +99,50 @@ def process_pose(
         raise HTTPException(status_code=404, detail="Session not found.")
     if session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Permission denied.")
+    
+    # Guard: Only process if session is not finalized
+    if session.status not in ["pending", "running", "active"]:
+        return {
+            "confidence": 0,
+            "is_correct": False,
+            "tip": f"Session is {session.status}. Processing stopped.",
+            "left_abduction": 0,
+            "right_abduction": 0,
+            "accuracy_score": session.accuracy_score or 0,
+        }
 
     try:
-        confidence, is_correct, tip, left_abd, right_abd = run_inference(
+        confidence, is_correct, tip, left_abd, right_abd, raw_conf = run_inference(
             body.session_id, body.features
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    
-    session.accuracy_score = round(confidence * 100, 2)
+    # Update global session average using binary correctness (0 or 1)
+    # This reflects the percentage of time the user was in the correct pose
+    score_increment = 1.0 if is_correct else 0.0
+
+    with _lock:
+        if body.session_id not in _session_metrics:
+            _session_metrics[body.session_id] = {"sum": 0.0, "count": 0}
+        
+        _session_metrics[body.session_id]["sum"] += score_increment
+        _session_metrics[body.session_id]["count"] += 1
+        
+        session_avg = _session_metrics[body.session_id]["sum"] / _session_metrics[body.session_id]["count"]
+
+    # Persist the cumulative average to the database
+    session.accuracy_score = round(session_avg * 100, 2)
     session.end_time       = datetime.utcnow()
     db.commit()
 
     return {
-        "confidence":      round(confidence, 4),
+        "confidence":      round(confidence, 4), # current window confidence (0.0 - 1.0)
         "is_correct":      is_correct,
         "tip":             tip,
         "left_abduction":  round(left_abd, 1),
         "right_abduction": round(right_abd, 1),
-        "accuracy_score":  round(confidence * 100, 2),
+        "accuracy_score":  round(confidence * 100, 2), # Live performance for UI (0 - 100)
     }
 
 from models.feedback import Feedback
@@ -159,6 +184,7 @@ def finalize_session(
 
     with _lock:
         _pred_buffers.pop(session_id, None)
+        _session_metrics.pop(session_id, None)
 
     db.commit()
     db.refresh(session)
