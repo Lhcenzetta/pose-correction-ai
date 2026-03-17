@@ -28,5 +28,6 @@ class SessionResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class PoseData(BaseModel):
-    features: list 
+class PoseFeatures(BaseModel):
+    features: list[float]        
+    session_id: int 

@@ -139,4 +139,3 @@ def test_get_me():
 def test_get_me_no_token():
     response = client.get("/me")
     assert response.status_code in [401, 403]
-

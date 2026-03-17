@@ -19,7 +19,7 @@ app.add_middleware(
 app.include_router(authontification.router)
 app.include_router(manage_session.router)
 app.include_router(select_exercice.router)
-app.include_router(feedback_session.router)
+# app.include_router(feedback_session.router)
 
 
 
