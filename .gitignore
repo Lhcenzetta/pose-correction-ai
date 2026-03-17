@@ -7,3 +7,6 @@ __pycache__
 *.pyc
 index.html
 __pycache__ 
+.pytest_cache
+__pycache__
+test.db

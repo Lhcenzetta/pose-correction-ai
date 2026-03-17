@@ -17,3 +17,8 @@ psycopg2
 bcrypt==4.3.0
 passlib[bcrypt]
 pydantic[email]
+
+
+pytest 
+pytest-asyncio 
+httpx --break-system-packages
