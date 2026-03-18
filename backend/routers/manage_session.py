@@ -139,6 +139,7 @@ def process_pose(
         "accuracy_score": round(confidence * 100, 2),
     }
 
+
 def generate_feedback_comment(accuracy_score: float) -> str:
     if accuracy_score >= 90:
         return "Excellent! Your form is nearly perfect. Keep up the great work!"
