@@ -23,20 +23,20 @@ interface PoseResult {
 
 export default function SessionPage() {
   const router = useRouter();
-  const videoRef    = useRef<HTMLVideoElement>(null);
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const poseRef     = useRef<any>(null);
-  const cameraRef   = useRef<any>(null);
-  const timerRef    = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const poseRef = useRef<any>(null);
+  const cameraRef = useRef<any>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isSendingRef = useRef(false);
-  const sessionRef  = useRef<SessionConfig | null>(null);
-  const scoresRef   = useRef<number[]>([]);
+  const sessionRef = useRef<SessionConfig | null>(null);
+  const scoresRef = useRef<number[]>([]);
 
-  const [config, setConfig]     = useState<SessionConfig | null>(null);
+  const [config, setConfig] = useState<SessionConfig | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [result, setResult]     = useState<PoseResult | null>(null);
+  const [result, setResult] = useState<PoseResult | null>(null);
   const [pageStatus, setPageStatus] = useState<'loading' | 'ready' | 'running'>('loading');
-  const [error, setError]       = useState('');
+  const [error, setError] = useState('');
 
   // ── Load external scripts ──────────────────────────────────────
   function loadScript(src: string): Promise<void> {
@@ -45,7 +45,7 @@ export default function SessionPage() {
       const s = document.createElement('script');
       s.src = src;
       s.crossOrigin = 'anonymous';
-      s.onload  = () => resolve();
+      s.onload = () => resolve();
       s.onerror = () => reject(new Error(`Failed to load ${src}`));
       document.head.appendChild(s);
     });
@@ -61,7 +61,7 @@ export default function SessionPage() {
       });
     } catch { /* ignore network errors — session already saved */ }
 
-    if (timerRef.current)  clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     if (cameraRef.current) cameraRef.current.stop();
 
     router.push('/results');
@@ -105,7 +105,7 @@ export default function SessionPage() {
   function calcAngle(p1: any, p2: any, p3: any): number {
     const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
     const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
-    const dot  = v1.x * v2.x + v1.y * v2.y;
+    const dot = v1.x * v2.x + v1.y * v2.y;
     const mag1 = Math.sqrt(v1.x ** 2 + v1.y ** 2);
     const mag2 = Math.sqrt(v2.x ** 2 + v2.y ** 2);
     return (Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2 + 1e-6)))) * 180) / Math.PI;
@@ -220,7 +220,7 @@ export default function SessionPage() {
     init();
 
     return () => {
-      if (timerRef.current)  clearInterval(timerRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
       if (cameraRef.current) cameraRef.current.stop();
     };
   }, []);
@@ -252,7 +252,7 @@ export default function SessionPage() {
   }
 
   const totalSeconds = config?.duration_seconds || 1;
-  const progress     = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
 
   // ── Styles ─────────────────────────────────────────────────────
   const S: Record<string, React.CSSProperties> = {

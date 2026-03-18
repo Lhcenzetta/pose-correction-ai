@@ -24,3 +24,6 @@ pydantic[email]
 pytest 
 pytest-asyncio 
 httpx
+mlflow
+black
+flake8

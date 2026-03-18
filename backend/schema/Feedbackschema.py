@@ -2,15 +2,19 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
+
 class FeedbackBase(BaseModel):
     comment: Optional[str] = None
     score: Optional[int] = None
 
+
 class FeedbackCreate(FeedbackBase):
     session_id: int
 
+
 class FeedbackUpdate(FeedbackBase):
     pass
+
 
 class FeedbackResponse(BaseModel):
     id: int

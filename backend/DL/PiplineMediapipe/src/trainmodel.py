@@ -19,7 +19,11 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+)
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -28,8 +32,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 # ── Load data ─────────────────────────────────────────────────────
 df = pd.read_csv("keypoints_dataset.csv")
-X  = df.drop("label", axis=1).values   # 28 features
-y  = df["label"].values                 # 0=incorrect, 1=correct
+X = df.drop("label", axis=1).values  # 28 features
+y = df["label"].values  # 0=incorrect, 1=correct
 
 print(f"Dataset: {len(df)} samples")
 print(f"  Correct  : {int(y.sum())}")
@@ -52,7 +56,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 # ── Normalize ─────────────────────────────────────────────────────
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
-X_test  = scaler.transform(X_test)
+X_test = scaler.transform(X_test)
 
 with open("scaler.pkl", "wb") as f:
     pickle.dump(scaler, f)
@@ -60,25 +64,20 @@ print("\n✅ Scaler saved: scaler.pkl")
 
 # ── Build model ───────────────────────────────────────────────────
 # Smaller model since we only have 28 features (not 99)
-model = Sequential([
-    Dense(64, activation="relu", input_shape=(X_train.shape[1],)),
-    BatchNormalization(),
-    Dropout(0.3),
-
-    Dense(32, activation="relu"),
-    BatchNormalization(),
-    Dropout(0.2),
-
-    Dense(16, activation="relu"),
-
-    Dense(1, activation="sigmoid")
-])
-
-model.compile(
-    optimizer="adam",
-    loss="binary_crossentropy",
-    metrics=["accuracy"]
+model = Sequential(
+    [
+        Dense(64, activation="relu", input_shape=(X_train.shape[1],)),
+        BatchNormalization(),
+        Dropout(0.3),
+        Dense(32, activation="relu"),
+        BatchNormalization(),
+        Dropout(0.2),
+        Dense(16, activation="relu"),
+        Dense(1, activation="sigmoid"),
+    ]
 )
+
+model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
 
 model.summary()
 
@@ -86,12 +85,13 @@ model.summary()
 early_stop = EarlyStopping(patience=20, restore_best_weights=True)
 
 history = model.fit(
-    X_train, y_train,
+    X_train,
+    y_train,
     epochs=150,
     batch_size=16,
     validation_split=0.2,
     callbacks=[early_stop],
-    verbose=1
+    verbose=1,
 )
 
 # ── Evaluate ──────────────────────────────────────────────────────

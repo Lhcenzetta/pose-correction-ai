@@ -8,8 +8,10 @@ from collections import deque
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+import mlflow
+from models.feedback import Feedback
 from routers.authontification import get_current_user
-from schema.Sessionschema import SessionCreate, SessionResponse ,PoseFeatures
+from schema.Sessionschema import SessionCreate, SessionResponse, PoseFeatures
 from models.user import User
 from models.exercices import Exercice
 from models.session import Session as SessionModel
@@ -18,21 +20,18 @@ from db.database import get_db
 router = APIRouter()
 
 
-model  = tf.keras.models.load_model(os.getenv("shoulder_model"))
+model = tf.keras.models.load_model(os.getenv("shoulder_model"))
 with open(os.getenv("scale"), "rb") as f:
     scaler = pickle.load(f)
 
 _pred_buffers: dict[int, deque] = {}
-_session_metrics: dict[int, dict] = {} # {session_id: {"sum": 0.0, "count": 0}}
+_session_metrics: dict[int, dict] = {}
 _lock = threading.Lock()
 
 
 def run_inference(session_id: int, features: list[float]):
-    if len(features) != 28:
-        raise ValueError(f"Expected 28 features, got {len(features)}")
-
     feat_scaled = scaler.transform(np.array(features).reshape(1, -1))
-    raw_conf    = float(model.predict(feat_scaled, verbose=0)[0][0])
+    raw_conf = float(model.predict(feat_scaled, verbose=0)[0][0])
 
     with _lock:
         if session_id not in _pred_buffers:
@@ -42,10 +41,8 @@ def run_inference(session_id: int, features: list[float]):
 
     is_correct = confidence >= 0.5
 
-    
-    left_abd  = features[26]  
+    left_abd = features[26]
     right_abd = features[27]
-
 
     if is_correct:
         tip = f"Good! L:{left_abd:.0f}°  R:{right_abd:.0f}°"
@@ -62,8 +59,6 @@ def run_inference(session_id: int, features: list[float]):
     return confidence, is_correct, tip, left_abd, right_abd, raw_conf
 
 
-
-
 @router.post("/session", response_model=SessionResponse)
 def create_session(
     session_data: SessionCreate,
@@ -76,11 +71,11 @@ def create_session(
         raise HTTPException(status_code=404, detail="Exercise not found.")
 
     new_session = SessionModel(
-        user_id          = session_data.user_id,
-        exercise_id      = session_data.exercise_id,
-        start_time       = datetime.utcnow(),
-        duration_seconds = session_data.duration_seconds,
-        status           = "pending",
+        user_id=session_data.user_id,
+        exercise_id=session_data.exercise_id,
+        start_time=datetime.utcnow(),
+        duration_seconds=session_data.duration_seconds,
+        status="pending",
     )
     db.add(new_session)
     db.commit()
@@ -99,8 +94,7 @@ def process_pose(
         raise HTTPException(status_code=404, detail="Session not found.")
     if session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Permission denied.")
-    
-    # Guard: Only process if session is not finalized
+
     if session.status not in ["pending", "running", "active"]:
         return {
             "confidence": 0,
@@ -118,34 +112,33 @@ def process_pose(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Update global session average using binary correctness (0 or 1)
-    # This reflects the percentage of time the user was in the correct pose
-    score_increment = 1.0 if is_correct else 0.0
+    score_increment = float(confidence)
 
     with _lock:
         if body.session_id not in _session_metrics:
             _session_metrics[body.session_id] = {"sum": 0.0, "count": 0}
-        
+
         _session_metrics[body.session_id]["sum"] += score_increment
         _session_metrics[body.session_id]["count"] += 1
-        
-        session_avg = _session_metrics[body.session_id]["sum"] / _session_metrics[body.session_id]["count"]
 
-    # Persist the cumulative average to the database
+        session_avg = (
+            _session_metrics[body.session_id]["sum"]
+            / _session_metrics[body.session_id]["count"]
+        )
+
     session.accuracy_score = round(session_avg * 100, 2)
-    session.end_time       = datetime.utcnow()
+    session.end_time = datetime.utcnow()
     db.commit()
 
     return {
-        "confidence":      round(confidence, 4), # current window confidence (0.0 - 1.0)
-        "is_correct":      is_correct,
-        "tip":             tip,
-        "left_abduction":  round(left_abd, 1),
+        "confidence": round(confidence, 4),
+        "is_correct": is_correct,
+        "tip": tip,
+        "left_abduction": round(left_abd, 1),
         "right_abduction": round(right_abd, 1),
-        "accuracy_score":  round(confidence * 100, 2), # Live performance for UI (0 - 100)
+        "accuracy_score": round(confidence * 100, 2),
     }
 
-from models.feedback import Feedback
 
 def generate_feedback_comment(accuracy_score: float) -> str:
     if accuracy_score >= 90:
@@ -156,6 +149,7 @@ def generate_feedback_comment(accuracy_score: float) -> str:
         return "You're doing well! Pay attention to your posture and alignment."
     else:
         return "Keep practicing! Focus on your form. Don't hesitate to review the instructional video."
+
 
 @router.post("/session/{session_id}/finalize", response_model=SessionResponse)
 def finalize_session(
@@ -169,16 +163,31 @@ def finalize_session(
     if session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Permission denied.")
 
-    session.status   = "completed"
+    session.status = "completed"
     session.end_time = datetime.utcnow()
+
+    # Log to MLflow
+    try:
+        mlflow.set_tracking_uri(
+            os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
+        )
+        mlflow.set_experiment("Pose_Correction_Sessions")
+        with mlflow.start_run(run_name=f"Session_{session_id}_{current_user.email}"):
+            mlflow.log_param("user_id", session.user_id)
+            mlflow.log_param("exercise_id", session.exercise_id)
+            mlflow.log_param("duration_seconds", session.duration_seconds)
+            if session.accuracy_score is not None:
+                mlflow.log_metric("accuracy_score", session.accuracy_score)
+    except Exception as e:
+        print(f"MLflow tracking failed: {e}")
 
     existing = db.query(Feedback).filter(Feedback.session_id == session_id).first()
     if not existing and session.accuracy_score is not None:
         feedback = Feedback(
-            session_id = session_id,
-            comment    = generate_feedback_comment(session.accuracy_score),
-            score      = int(session.accuracy_score),
-            created_at = datetime.utcnow(),
+            session_id=session_id,
+            comment=generate_feedback_comment(session.accuracy_score),
+            score=int(session.accuracy_score),
+            created_at=datetime.utcnow(),
         )
         db.add(feedback)
 
@@ -190,6 +199,7 @@ def finalize_session(
     db.refresh(session)
     return session
 
+
 @router.get("/sessions/user/{user_id}")
 def get_user_sessions(
     user_id: int,
@@ -198,7 +208,7 @@ def get_user_sessions(
 ):
     if current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Access denied.")
-    
+
     sessions = (
         db.query(SessionModel)
         .filter(SessionModel.user_id == user_id)
@@ -210,20 +220,29 @@ def get_user_sessions(
     for s in sessions:
         feedback = db.query(Feedback).filter(Feedback.session_id == s.id).first()
         exercise = db.query(Exercice).filter(Exercice.id == s.exercise_id).first()
-        result.append({
-            "id":             s.id,
-            "exercise_id":    s.exercise_id,
-            "exercise_name":  exercise.name if exercise else f"Exercise #{s.exercise_id}",
-            "start_time":     s.start_time,
-            "duration_seconds": s.duration_seconds,
-            "accuracy_score": s.accuracy_score,
-            "status":         s.status,
-            "feedback": {
-                "comment": feedback.comment,
-                "score":   feedback.score,
-            } if feedback else None,
-        })
+        result.append(
+            {
+                "id": s.id,
+                "exercise_id": s.exercise_id,
+                "exercise_name": (
+                    exercise.name if exercise else f"Exercise #{s.exercise_id}"
+                ),
+                "start_time": s.start_time,
+                "duration_seconds": s.duration_seconds,
+                "accuracy_score": s.accuracy_score,
+                "status": s.status,
+                "feedback": (
+                    {
+                        "comment": feedback.comment,
+                        "score": feedback.score,
+                    }
+                    if feedback
+                    else None
+                ),
+            }
+        )
     return result
+
 
 @router.delete("/{session_id} delette session", status_code=status.HTTP_204_NO_CONTENT)
 def delete_session(
@@ -237,14 +256,14 @@ def delete_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found.",
         )
-    
+
     if session.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete this session.",
         )
-    
+
     db.delete(session)
     db.commit()
-    
+
     return None
