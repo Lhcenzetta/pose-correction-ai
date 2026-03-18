@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import mlflow
-
+from models.feedback import Feedback
 from routers.authontification import get_current_user
 from schema.Sessionschema import SessionCreate, SessionResponse, PoseFeatures
 from models.user import User
@@ -138,10 +138,6 @@ def process_pose(
         "right_abduction": round(right_abd, 1),
         "accuracy_score": round(confidence * 100, 2),
     }
-
-
-from models.feedback import Feedback
-
 
 def generate_feedback_comment(accuracy_score: float) -> str:
     if accuracy_score >= 90:
