@@ -23,19 +23,23 @@ import numpy as np
 import os
 
 # ── Config ────────────────────────────────────────────────────────
-MODEL_PATH  = "/Users/lait-zet/Desktop/pose-correction-ai/mediapip3/pose_landmarker.task"   # ← your .task file
+MODEL_PATH = "/Users/lait-zet/Desktop/pose-correction-ai/mediapip3/pose_landmarker.task"  # ← your .task file
 DATASET_DIR = "/Users/lait-zet/Desktop/pose-correction-ai/mediapip3/dataset"
-OUTPUT_CSV  = "keypoints_dataset.csv"
+OUTPUT_CSV = "keypoints_dataset.csv"
 
 CLASSES = {"correct": 1, "incorrect": 0}
 
 # ── Landmark indices for shoulder abduction ───────────────────────
 # We only use upper body landmarks (11–16) + a few torso points
 UPPER_BODY_IDS = [
-    11, 12,   # shoulders
-    13, 14,   # elbows
-    15, 16,   # wrists
-    23, 24,   # hips (for torso reference)
+    11,
+    12,  # shoulders
+    13,
+    14,  # elbows
+    15,
+    16,  # wrists
+    23,
+    24,  # hips (for torso reference)
 ]
 
 # ── MediaPipe setup ───────────────────────────────────────────────
@@ -49,6 +53,7 @@ options = vision.PoseLandmarkerOptions(
 )
 landmarker = vision.PoseLandmarker.create_from_options(options)
 
+
 # ── Angle calculation ─────────────────────────────────────────────
 def calc_angle(a, b, c):
     """
@@ -61,6 +66,7 @@ def calc_angle(a, b, c):
     bc = c - b
     cosine = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
     return np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
+
 
 def extract_features(image_path):
     """
@@ -99,26 +105,26 @@ def extract_features(image_path):
 
     l_shoulder = get_xy(11)
     r_shoulder = get_xy(12)
-    l_elbow    = get_xy(13)
-    r_elbow    = get_xy(14)
-    l_wrist    = get_xy(15)
-    r_wrist    = get_xy(16)
-    l_hip      = get_xy(23)
-    r_hip      = get_xy(24)
+    l_elbow = get_xy(13)
+    r_elbow = get_xy(14)
+    l_wrist = get_xy(15)
+    r_wrist = get_xy(16)
+    l_hip = get_xy(23)
+    r_hip = get_xy(24)
 
     # Elbow angles (shoulder → elbow → wrist)
-    left_elbow_angle  = calc_angle(l_shoulder, l_elbow, l_wrist)
+    left_elbow_angle = calc_angle(l_shoulder, l_elbow, l_wrist)
     right_elbow_angle = calc_angle(r_shoulder, r_elbow, r_wrist)
 
     # Shoulder abduction angle (hip → shoulder → elbow)
     # This captures how high the arm is raised relative to the torso
-    left_abduction  = calc_angle(l_hip, l_shoulder, l_elbow)
+    left_abduction = calc_angle(l_hip, l_shoulder, l_elbow)
     right_abduction = calc_angle(r_hip, r_shoulder, r_elbow)
 
-    angles = [left_elbow_angle, right_elbow_angle,
-              left_abduction,   right_abduction]
+    angles = [left_elbow_angle, right_elbow_angle, left_abduction, right_abduction]
 
     return keypoints + angles  # 28 features total
+
 
 # ── Process dataset ───────────────────────────────────────────────
 rows = []
@@ -130,8 +136,9 @@ for label_name, label_value in CLASSES.items():
         print(f"⚠️  Folder not found: {folder}")
         continue
 
-    files = [f for f in os.listdir(folder)
-             if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    files = [
+        f for f in os.listdir(folder) if f.lower().endswith((".jpg", ".jpeg", ".png"))
+    ]
     print(f"Processing '{label_name}': {len(files)} images...")
 
     for filename in files:
@@ -171,7 +178,7 @@ print(f"   Incorrect      : {len(df[df['label']==0])}")
 print(f"   Skipped        : {skipped}")
 print(f"   Saved to       : {OUTPUT_CSV}")
 print(f"\n📐 Average angles (correct posture):")
-correct = df[df['label']==1]
+correct = df[df["label"] == 1]
 if len(correct) > 0:
     print(f"   Left abduction : {correct['left_abduction_angle'].mean():.1f}°")
     print(f"   Right abduction: {correct['right_abduction_angle'].mean():.1f}°")

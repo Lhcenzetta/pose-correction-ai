@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import numpy as np
 from tensorflow.keras.models import load_model
 from collections import deque
+
 load_dotenv()
 
 model_path = os.getenv("model_path")
@@ -27,7 +28,6 @@ while True:
     img = img / 255.0
     img = np.expand_dims(img, axis=0)
 
-
     prediction = model.predict(img, verbose=0)
     probability = prediction[0][0]
 
@@ -43,18 +43,21 @@ while True:
         correct_frames += 1
     else:
         label = "INCORRECT"
-        color = (0, 0, 255) 
-        
-    cv2.putText(frame, f"{label} ({probability:.2f})",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                color,
-                2)
+        color = (0, 0, 255)
+
+    cv2.putText(
+        frame,
+        f"{label} ({probability:.2f})",
+        (20, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        color,
+        2,
+    )
 
     cv2.imshow("Pose Correction AI", frame)
-    
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 cap.release()
