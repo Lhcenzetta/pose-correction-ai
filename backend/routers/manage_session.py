@@ -23,16 +23,13 @@ with open(os.getenv("scale"), "rb") as f:
     scaler = pickle.load(f)
 
 _pred_buffers: dict[int, deque] = {}
-_session_metrics: dict[int, dict] = {} # {session_id: {"sum": 0.0, "count": 0}}
+_session_metrics: dict[int, dict] = {} 
 _lock = threading.Lock()
 
 
 def run_inference(session_id: int, features: list[float]):
-    if len(features) != 28:
-        raise ValueError(f"Expected 28 features, got {len(features)}")
-
     feat_scaled = scaler.transform(np.array(features).reshape(1, -1))
-    raw_conf    = float(model.predict(feat_scaled, verbose=0)[0][0])
+    raw_conf     = float(model.predict(feat_scaled, verbose=0)[0][0])
 
     with _lock:
         if session_id not in _pred_buffers:
@@ -100,7 +97,6 @@ def process_pose(
     if session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Permission denied.")
     
-    # Guard: Only process if session is not finalized
     if session.status not in ["pending", "running", "active"]:
         return {
             "confidence": 0,
@@ -118,9 +114,8 @@ def process_pose(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Update global session average using binary correctness (0 or 1)
-    # This reflects the percentage of time the user was in the correct pose
-    score_increment = 1.0 if is_correct else 0.0
+    # Increment by the actual confidence to calculate the average accuracy score
+    score_increment = float(confidence)
 
     with _lock:
         if body.session_id not in _session_metrics:
@@ -137,12 +132,12 @@ def process_pose(
     db.commit()
 
     return {
-        "confidence":      round(confidence, 4), # current window confidence (0.0 - 1.0)
+        "confidence":      round(confidence, 4), 
         "is_correct":      is_correct,
         "tip":             tip,
         "left_abduction":  round(left_abd, 1),
         "right_abduction": round(right_abd, 1),
-        "accuracy_score":  round(confidence * 100, 2), # Live performance for UI (0 - 100)
+        "accuracy_score":  round(confidence * 100, 2), 
     }
 
 from models.feedback import Feedback
@@ -156,6 +151,40 @@ def generate_feedback_comment(accuracy_score: float) -> str:
         return "You're doing well! Pay attention to your posture and alignment."
     else:
         return "Keep practicing! Focus on your form. Don't hesitate to review the instructional video."
+
+@router.post("/session/{session_id}/pause", response_model=SessionResponse)
+def pause_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Permission denied.")
+
+    session.status = "paused"
+    db.commit()
+    db.refresh(session)
+    return session
+
+@router.post("/session/{session_id}/resume", response_model=SessionResponse)
+def resume_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Permission denied.")
+
+    session.status = "active"
+    db.commit()
+    db.refresh(session)
+    return session
 
 @router.post("/session/{session_id}/finalize", response_model=SessionResponse)
 def finalize_session(

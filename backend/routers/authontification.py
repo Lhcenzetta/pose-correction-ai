@@ -40,7 +40,7 @@ def verfiy_token(cre: HTTPAuthorizationCredentials = Depends(barear_chema)):
         )
     return decode
 
-def get_current_user(token: dict = Depends(verfiy_token), db: Session = Depends(get_db)) -> User:
+def get_current_user(token: dict = Depends(verfiy_token), db: Session = Depends(get_db)):
     email = token.get("sub")
     user = db.query(User).filter(User.email == email).first()
     if not user:
@@ -50,7 +50,7 @@ def get_current_user(token: dict = Depends(verfiy_token), db: Session = Depends(
         )
     return user
 
-@router.post("/Signup", status_code=201)
+@router.post("/Signup")
 def create_account(user: UserSchema.CreateUser, db: Session = Depends(get_db)):
     exist_user = db.query(User).filter(User.email == user.email).first()
     if exist_user:
