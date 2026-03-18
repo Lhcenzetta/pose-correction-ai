@@ -24,3 +24,4 @@ pydantic[email]
 pytest 
 pytest-asyncio 
 httpx
+mlflow

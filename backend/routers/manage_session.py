@@ -8,6 +8,8 @@ from collections import deque
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+import mlflow
+
 from routers.authontification import get_current_user
 from schema.Sessionschema import SessionCreate, SessionResponse ,PoseFeatures
 from models.user import User
@@ -114,7 +116,7 @@ def process_pose(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Increment by the actual confidence to calculate the average accuracy score
+   
     score_increment = float(confidence)
 
     with _lock:
@@ -126,7 +128,7 @@ def process_pose(
         
         session_avg = _session_metrics[body.session_id]["sum"] / _session_metrics[body.session_id]["count"]
 
-    # Persist the cumulative average to the database
+ 
     session.accuracy_score = round(session_avg * 100, 2)
     session.end_time       = datetime.utcnow()
     db.commit()
@@ -152,40 +154,6 @@ def generate_feedback_comment(accuracy_score: float) -> str:
     else:
         return "Keep practicing! Focus on your form. Don't hesitate to review the instructional video."
 
-@router.post("/session/{session_id}/pause", response_model=SessionResponse)
-def pause_session(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found.")
-    if session.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Permission denied.")
-
-    session.status = "paused"
-    db.commit()
-    db.refresh(session)
-    return session
-
-@router.post("/session/{session_id}/resume", response_model=SessionResponse)
-def resume_session(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found.")
-    if session.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Permission denied.")
-
-    session.status = "active"
-    db.commit()
-    db.refresh(session)
-    return session
-
 @router.post("/session/{session_id}/finalize", response_model=SessionResponse)
 def finalize_session(
     session_id: int,
@@ -200,6 +168,19 @@ def finalize_session(
 
     session.status   = "completed"
     session.end_time = datetime.utcnow()
+
+    # Log to MLflow
+    try:
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+        mlflow.set_experiment("Pose_Correction_Sessions")
+        with mlflow.start_run(run_name=f"Session_{session_id}_{current_user.email}"):
+            mlflow.log_param("user_id", session.user_id)
+            mlflow.log_param("exercise_id", session.exercise_id)
+            mlflow.log_param("duration_seconds", session.duration_seconds)
+            if session.accuracy_score is not None:
+                mlflow.log_metric("accuracy_score", session.accuracy_score)
+    except Exception as e:
+        print(f"MLflow tracking failed: {e}")
 
     existing = db.query(Feedback).filter(Feedback.session_id == session_id).first()
     if not existing and session.accuracy_score is not None:
