@@ -2,7 +2,7 @@ name: Python Backend Tests
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master","feature/github_action"]
   pull_request:
     branches: [ "main", "master" ]
 
