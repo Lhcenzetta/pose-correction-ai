@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import manage_session, select_exercice, authontification, feedback_session
+from routers import manage_session, select_exercice, authontification
 from db.database import engine, Base
 from models.user import User
 from models.session import Session

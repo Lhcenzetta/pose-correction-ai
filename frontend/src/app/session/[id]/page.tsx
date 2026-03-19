@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import PoseGuide from '@/components/PoseGuide';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -37,6 +38,7 @@ export default function SessionPage() {
   const [result, setResult] = useState<PoseResult | null>(null);
   const [pageStatus, setPageStatus] = useState<'loading' | 'ready' | 'running'>('loading');
   const [error, setError] = useState('');
+  const [hasCompletedGuide, setHasCompletedGuide] = useState(false);
 
   // ── Load external scripts ──────────────────────────────────────
   function loadScript(src: string): Promise<void> {
@@ -310,7 +312,8 @@ export default function SessionPage() {
 
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div style={S.page}>
+    <>
+      <div style={S.page}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -483,6 +486,30 @@ export default function SessionPage() {
           )}
         </div>
       </main>
-    </div>
+      </div>
+
+      {!hasCompletedGuide && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, overflow: 'auto', background: '#f7f9f7' }}>
+          <PoseGuide
+            exerciseName={config?.exercise_name || 'Loading...'}
+            poseImageSrc={[
+              "/Gemini_Generated_Image_cdr8a4cdr8a4cdr8.png",
+              "/Gemini_Generated_Image_l281ndl281ndl281.png"
+            ]}
+            instructions={[
+              "Stand up straight facing the camera with your body fully visible.",
+              "Keep your arms resting at zero degrees initially.",
+              "Move your arm up steadily to 90 degrees.",
+              "Bring your arm back down to the resting zero position smoothly."
+            ]}
+            onStart={() => {
+              setHasCompletedGuide(true);
+              startSession();
+            }}
+            onBack={() => router.push('/select-exercise')}
+          />
+        </div>
+      )}
+    </>
   );
 }
