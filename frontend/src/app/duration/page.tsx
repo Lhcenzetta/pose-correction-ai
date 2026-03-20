@@ -18,9 +18,13 @@ export default function DurationPage() {
   useEffect(() => {
     const stored = localStorage.getItem('selected_exercise');
     if (!stored) { router.push('/select-exercise'); return; }
-    const ex: Exercise = JSON.parse(stored);
-    setExercise(ex);
-    if (ex.duration_time) setSelected(ex.duration_time);
+    try {
+      const ex: Exercise = JSON.parse(stored);
+      setExercise(ex);
+      if (ex.duration_time && ex.duration_time > 0) setSelected(ex.duration_time);
+    } catch (e) {
+      router.push('/select-exercise');
+    }
   }, []);
 
   function handlePill(min: number) {
@@ -42,14 +46,12 @@ export default function DurationPage() {
     const token = localStorage.getItem('access_token');
 
     try {
-      // Step 1 — get real user id
       const meRes = await fetch(`${API}/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!meRes.ok) throw new Error('Auth failed — please log in again.');
+      if (!meRes.ok) throw new Error('Authentication expired. Please log in again.');
       const me = await meRes.json();
 
-      // Step 2 — create session
       const res = await fetch(`${API}/session`, {
         method: 'POST',
         headers: {
@@ -65,7 +67,7 @@ export default function DurationPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || 'Failed to create session.');
+        throw new Error(data.detail || 'Failed to initialize clinical session.');
       }
 
       const session = await res.json();
@@ -86,92 +88,138 @@ export default function DurationPage() {
   }
 
   const S = {
-    page: { fontFamily: "'DM Sans', sans-serif", background: '#f7f9f7', minHeight: '100vh' } as React.CSSProperties,
-    nav: { background: '#fff', borderBottom: '1px solid #e3ede5', padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, zIndex: 10 },
-    main: { maxWidth: 520, margin: '0 auto', padding: '3rem 2rem', display: 'flex', flexDirection: 'column' as const, alignItems: 'center' },
-    card: { background: '#fff', border: '1px solid #e3ede5', borderRadius: 20, padding: '2rem', width: '100%' },
-    pill: (active: boolean): React.CSSProperties => ({
-      background: active ? '#f0f9f3' : '#f7f9f7',
-      border: `1.5px solid ${active ? '#1a6640' : '#e3ede5'}`,
-      borderRadius: 14, padding: '1rem 0.75rem',
-      textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
-      boxShadow: active ? '0 0 0 3px rgba(26,102,64,0.08)' : 'none',
+    page: {
+      backgroundColor: 'var(--bg-medical)',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column' as const,
+    },
+    nav: {
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      padding: '1rem 2rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      position: 'sticky' as const,
+      top: 0,
+      zIndex: 10,
+    },
+    main: {
+      maxWidth: '600px',
+      margin: '0 auto',
+      padding: '3rem 2rem',
+      width: '100%',
+    },
+    card: {
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '2rem',
+      boxShadow: 'var(--shadow-subtle)',
+    },
+    pill: (active: boolean) => ({
+      background: active ? 'var(--bg-medical)' : 'var(--surface)',
+      border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+      borderRadius: '8px',
+      padding: '1rem',
+      textAlign: 'center' as const,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      boxShadow: active ? '0 0 0 1px var(--primary)' : 'none',
     }),
-    btnStart: (enabled: boolean): React.CSSProperties => ({
-      width: '100%', background: enabled ? '#1a6640' : '#e3ede5',
-      color: enabled ? '#fff' : '#b5cfb9', border: 'none',
-      padding: 14, borderRadius: 100, fontSize: 15, fontWeight: 500,
-      fontFamily: "'DM Sans', sans-serif",
-      cursor: enabled ? 'pointer' : 'not-allowed', transition: 'all 0.2s',
-    }),
+    btnPrimary: (enabled: boolean) => ({
+      background: enabled ? 'var(--primary)' : 'var(--border)',
+      color: enabled ? '#fff' : 'var(--text-secondary)',
+      border: 'none',
+      padding: '14px',
+      borderRadius: '6px',
+      fontSize: '15px',
+      fontWeight: 600,
+      cursor: enabled ? 'pointer' : 'not-allowed',
+      width: '100%',
+      marginTop: '1.5rem',
+      transition: 'all 0.2s',
+    })
   };
 
   return (
     <div style={S.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
-
       <nav style={S.nav}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: '#1a6640' }}>
-          Pose<span style={{ color: '#b5cfb9' }}>Correct</span>
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', cursor: 'pointer' }}
+          onClick={() => router.push('/')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+          <span>PoseCorrect</span>
         </div>
         <button onClick={() => router.push('/select-exercise')}
-          style={{ fontSize: 12, color: '#8aaa90', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-          ← Back
+          style={{ fontSize: '13px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+          Back to Selection
         </button>
       </nav>
 
       <main style={S.main}>
-        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a6640', marginBottom: 6 }}>Step 2 of 2</div>
-        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '2rem', fontWeight: 600, color: '#0f1f13', letterSpacing: -1, textAlign: 'center', marginBottom: 6 }}>Select duration</h1>
-        <p style={{ fontSize: 13, color: '#8aaa90', fontWeight: 300, textAlign: 'center', marginBottom: '2rem' }}>Follow your doctor's recommendation</p>
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Step 2 of 2</span>
+          <h1 style={{ fontSize: '2rem', fontWeight: 600, marginTop: '0.5rem', marginBottom: '1rem' }}>Set Duration</h1>
+          <p style={{ color: 'var(--text-secondary)', margin: '0 auto' }}>
+            Configure the recommended time for your <strong>{exercise?.name}</strong> session.
+          </p>
+        </div>
 
         <div style={S.card}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f0f9f3', border: '1px solid #c3d9c7', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#3a5a42', marginBottom: '1.75rem' }}>
-            <span>ℹ️</span>
-            <span>Please enter the session duration recommended by your doctor.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-medical)', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--primary)' }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <span>Physiotherapists typically recommend 5-10 minutes per session for beginners.</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: '1.5rem' }}>
-            {[2, 5, 10].map(min => (
+          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Recommended Presets</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+            {[3, 5, 10].map(min => (
               <div key={min} style={S.pill(selected === min && custom === '')} onClick={() => handlePill(min)}>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.75rem', fontWeight: 600, color: '#1a6640', letterSpacing: -1, lineHeight: 1 }}>{min}</div>
-                <div style={{ fontSize: 11, color: '#8aaa90', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>min</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: selected === min && custom === '' ? 'var(--primary)' : 'var(--text-primary)' }}>{min}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>MINUTES</div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.25rem 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#e3ede5' }} />
-            <span style={{ fontSize: 11, color: '#b5cfb9', textTransform: 'uppercase', letterSpacing: '0.08em' }}>or custom</span>
-            <div style={{ flex: 1, height: 1, background: '#e3ede5' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '2rem 0' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Custom Duration</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <input
-              type="number" min="1" max="60" placeholder="e.g. 7"
+              type="number" min="1" max="60" placeholder="7"
               value={custom}
               onChange={e => handleCustom(e.target.value)}
-              style={{ flex: 1, background: '#f7f9f7', border: '1.5px solid #e3ede5', borderRadius: 12, padding: '12px 16px', fontSize: '1.25rem', fontWeight: 500, fontFamily: "'Fraunces', serif", color: '#0f1f13', textAlign: 'center', outline: 'none' }}
+              style={{ flex: 1, background: '#fff', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px', fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center', outline: 'none' }}
             />
-            <span style={{ fontSize: 13, color: '#8aaa90', fontWeight: 300 }}>minutes</span>
+            <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>MINUTES</span>
           </div>
 
           {error && (
-            <div style={{ background: '#fef3e2', border: '1px solid #f5c4a0', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#b06a00', marginBottom: '1rem' }}>
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px', borderRadius: '6px', fontSize: '13px', marginTop: '1.5rem' }}>
               {error}
             </div>
           )}
 
           <button
-            style={S.btnStart(!!selected && selected > 0 && !loading)}
+            style={S.btnPrimary(!!selected && selected > 0 && !loading) as any}
             disabled={!selected || selected <= 0 || loading}
             onClick={handleStart}
           >
-            {loading ? 'Creating session...' : 'Start session →'}
+            {loading ? 'Initializing Session...' : 'Launch Clinical Session'}
           </button>
 
-          <p style={{ fontSize: 12, color: '#b5cfb9', textAlign: 'center', marginTop: 10, fontWeight: 300 }}>
-            {selected && selected > 0 ? `${selected} minute${selected > 1 ? 's' : ''} selected` : 'Choose a duration to continue'}
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '1rem' }}>
+            By starting, you agree to follow the AI guidance safely.
           </p>
         </div>
       </main>

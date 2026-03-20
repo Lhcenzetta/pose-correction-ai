@@ -2,20 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface User { id: number; first_name: string; last_name: string; email: string; }
 interface SessionItem { id: number; exercise_id: number; exercise_name?: string; start_time: string; duration_seconds: number; accuracy_score: number | null; status: string; }
-
-function exerciseIcon(name = '') {
-  const n = name.toLowerCase();
-  if (n.includes('squat')) return '🏋️';
-  if (n.includes('lunge')) return '🦵';
-  if (n.includes('shoulder') || n.includes('arm')) return '💪';
-  if (n.includes('stretch')) return '🤸';
-  return '🏃';
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -49,7 +41,7 @@ export default function DashboardPage() {
         const sess = sessRes.ok ? await sessRes.json() : [];
         setSessions(sess);
       } catch {
-        setError('Could not load your data. Is your API running?');
+        setError('Could not load medical data. Please refresh.');
       } finally {
         setLoading(false);
       }
@@ -61,106 +53,197 @@ export default function DashboardPage() {
   const avgScore = completed.length ? Math.round(completed.reduce((a, s) => a + s.accuracy_score!, 0) / completed.length) : null;
   const bestScore = completed.length ? Math.round(Math.max(...completed.map(s => s.accuracy_score!))) : null;
   const initials = user ? ((user.first_name?.[0] || '') + (user.last_name?.[0] || '')).toUpperCase() : '?';
-  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   const sorted = [...sessions].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
 
   const S = {
-    page: { fontFamily: "'DM Sans', sans-serif", background: '#f7f9f7', minHeight: '100vh', color: '#1a2e1f' } as React.CSSProperties,
-    nav: { background: '#fff', borderBottom: '1px solid #e3ede5', padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, zIndex: 10 },
-    logo: { fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: '#1a6640' },
-    avatar: { width: 34, height: 34, borderRadius: '50%', background: '#e8f4ec', color: '#1a6640', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500 },
-    main: { maxWidth: 900, margin: '0 auto', padding: '2.5rem 2rem' },
-    greeting: { fontFamily: "'Fraunces', serif", fontSize: '1.75rem', fontWeight: 600, color: '#0f1f13', letterSpacing: -0.5 },
-    statCard: { background: '#fff', border: '1px solid #e3ede5', borderRadius: 16, padding: '1.25rem 1.5rem' },
-    statVal: { fontFamily: "'Fraunces', serif", fontSize: '1.75rem', fontWeight: 600, color: '#1a6640', letterSpacing: -1, lineHeight: 1 },
-    sessionCard: { background: '#fff', border: '1px solid #e3ede5', borderRadius: 14, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, cursor: 'pointer' },
-    btnStart: { background: '#1a6640', color: '#fff', border: 'none', padding: '11px 24px', borderRadius: 100, fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' },
+    page: {
+      backgroundColor: 'var(--bg-medical)',
+      minHeight: '100vh',
+    },
+    nav: {
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      padding: '0.75rem 2rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      position: 'sticky' as const,
+      top: 0,
+      zIndex: 10,
+    },
+    main: {
+      maxWidth: '1000px',
+      margin: '0 auto',
+      padding: '2rem',
+    },
+    card: {
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '1.5rem',
+      boxShadow: 'var(--shadow-subtle)',
+    },
+    statLabel: {
+      fontSize: '10px',
+      fontWeight: 600,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.05em',
+      color: 'var(--text-secondary)',
+      marginBottom: '8px',
+    },
+    statValue: {
+      fontSize: '1.5rem',
+      fontWeight: 700,
+      color: 'var(--text-primary)',
+    },
+    btnPrimary: {
+      background: 'var(--primary)',
+      color: '#fff',
+      border: 'none',
+      padding: '10px 20px',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: 500,
+      cursor: 'pointer',
+    }
   };
 
   return (
     <div style={S.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
-
       <nav style={S.nav}>
-        <div style={S.logo}>Pose<span style={{ color: '#b5cfb9' }}>Correct</span></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={S.avatar}>{initials}</div>
-          <span style={{ fontSize: 13, color: '#3a5a42', fontWeight: 500 }}>{user?.first_name} {user?.last_name}</span>
-          <button onClick={() => { localStorage.removeItem('access_token'); router.push('/login'); }}
-            style={{ fontSize: 12, color: '#8aaa90', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-            Sign out
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', cursor: 'pointer' }}
+          onClick={() => router.push('/')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+          <span>PoseCorrect</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{user?.first_name} {user?.last_name}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Patient ID: #{user?.id}</div>
+          </div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-medical)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px', border: '1px solid var(--border)' }}>
+            {initials}
+          </div>
+          <button 
+            onClick={() => { localStorage.removeItem('access_token'); router.push('/login'); }}
+            style={{ padding: '6px', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}
+            title="Sign Out"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
           </button>
         </div>
       </nav>
 
       <main style={S.main}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
-            <div style={S.greeting}>Good day, <em style={{ color: '#1a6640', fontStyle: 'italic', fontWeight: 300 }}>{user?.first_name || '...'}</em></div>
-            <div style={{ fontSize: 12, color: '#8aaa90', marginTop: 4, fontWeight: 300 }}>{today}</div>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Patient Dashboard</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Welcome back. Today is {today}.</p>
           </div>
-          <button style={S.btnStart} onClick={() => router.push('/select-exercise')}>▶ Start exercise</button>
-        </div>
+          <button style={S.btnPrimary} onClick={() => router.push('/select-exercise')}>
+            Start New Session
+          </button>
+        </header>
 
-        {error && <div style={{ background: '#fef3e2', border: '1px solid #f5c4a0', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#b06a00', marginBottom: '1.5rem' }}>{error}</div>}
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem', marginBottom: '2rem' }}>
-          {[
-            { label: 'Avg accuracy', value: avgScore != null ? `${avgScore}%` : '—', sub: completed.length ? `${completed.length} sessions` : 'No sessions yet' },
-            { label: 'Sessions done', value: sessions.length || '0', sub: `${sessions.length} total` },
-            { label: 'Best score', value: bestScore != null ? `${bestScore}%` : '—', sub: 'Personal best' },
-          ].map(({ label, value, sub }) => (
-            <div key={label} style={S.statCard}>
-              <div style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.07em', color: '#8aaa90', marginBottom: 8 }}>{label}</div>
-              <div style={S.statVal}>{value}</div>
-              <div style={{ fontSize: 11, color: '#b5cfb9', marginTop: 6, fontWeight: 300 }}>{sub}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Sessions */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: 12 }}>
-          <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#8aaa90' }}>Previous sessions</span>
-          <div style={{ flex: 1, height: 1, background: '#e3ede5' }} />
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#b5cfb9', fontSize: 13 }}>Loading sessions...</div>
-        ) : sorted.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px dashed #c3d9c7', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🏃</div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.1rem', fontWeight: 600, color: '#0f1f13', marginBottom: 8 }}>No sessions yet</div>
-            <div style={{ fontSize: 13, color: '#8aaa90', fontWeight: 300, marginBottom: '1.5rem' }}>Complete your first exercise and results will appear here.</div>
-            <button onClick={() => router.push('/select-exercise')}
-              style={{ background: '#e8f4ec', color: '#1a6640', border: 'none', padding: '10px 22px', borderRadius: 100, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-              Start your first session
-            </button>
+        {error && (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px', borderRadius: '6px', fontSize: '13px', marginBottom: '2rem' }}>
+            {error}
           </div>
-        ) : (
-          sorted.map(s => (
-            <div key={s.id} style={S.sessionCard} onClick={() => router.push(`/session/${s.id}`)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#e8f4ec', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                  {exerciseIcon(s.exercise_name)}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: '#0f1f13' }}>{s.exercise_name || `Exercise #${s.exercise_id}`}</div>
-                  <div style={{ fontSize: 11, color: '#8aaa90', marginTop: 2, fontWeight: 300 }}>{formatDate(s.start_time)} · {formatDuration(s.duration_seconds)}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.2rem', fontWeight: 600, color: s.accuracy_score != null && s.accuracy_score < 70 ? '#b06a00' : '#1a6640', letterSpacing: -0.5 }}>
-                  {s.accuracy_score != null ? `${Math.round(s.accuracy_score)}%` : '—'}
-                </div>
-                <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 100, fontWeight: 500, background: s.status === 'completed' ? '#e8f4ec' : '#fef3e2', color: s.status === 'completed' ? '#1a6640' : '#b06a00' }}>
-                  {s.status}
-                </span>
-              </div>
-            </div>
-          ))
         )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+          <div style={S.card}>
+            <div style={S.statLabel}>Avg Recovery Score</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <div style={S.statValue}>{avgScore != null ? `${avgScore}%` : '—'}</div>
+              <div style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600 }}>Optimal</div>
+            </div>
+            <div style={{ height: '4px', background: 'var(--bg-medical)', borderRadius: '2px', marginTop: '12px' }}>
+              <div style={{ height: '100%', width: avgScore ? `${avgScore}%` : '0%', background: 'var(--primary)', borderRadius: '2px' }} />
+            </div>
+          </div>
+          <div style={S.card}>
+            <div style={S.statLabel}>Total Sessions</div>
+            <div style={S.statValue}>{sessions.length || '0'}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>Completed programs</div>
+          </div>
+          <div style={S.card}>
+            <div style={S.statLabel}>Peak Performance</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <div style={S.statValue}>{bestScore != null ? `${bestScore}%` : '—'}</div>
+              <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>Personal Best</div>
+            </div>
+          </div>
+        </div>
+
+        <section style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Recent Activity</h2>
+            <Link href="#" style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>View All</Link>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading transactions...</div>
+          ) : sorted.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-secondary)' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '1rem', opacity: 0.5 }}>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <p>No exercise history found. Start your first session to track progress.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--border)' }}>
+              {sorted.map(s => (
+                <div key={s.id} style={{ background: 'var(--surface)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ background: 'var(--bg-medical)', color: 'var(--primary)', padding: '8px', borderRadius: '6px' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 15V18H6V15" /><circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600 }}>{s.exercise_name || `Session #${s.id}`}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{formatDate(s.start_time)} · {formatDuration(s.duration_seconds)}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: s.accuracy_score != null && s.accuracy_score >= 80 ? 'var(--success)' : 'var(--text-primary)' }}>
+                        {s.accuracy_score != null ? `${Math.round(s.accuracy_score)}%` : '—'}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Accuracy</div>
+                    </div>
+                    <div style={{ 
+                      fontSize: '10px', 
+                      fontWeight: 600, 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      background: s.status === 'completed' ? '#DCFCE7' : '#FEF3C7',
+                      color: s.status === 'completed' ? '#166534' : '#92400E'
+                    }}>
+                      {s.status.toUpperCase()}
+                    </div>
+                    <button 
+                      onClick={() => router.push(`/session/${s.id}`)}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

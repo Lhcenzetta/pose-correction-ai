@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 
 interface PoseGuideProps {
   exerciseName: string;
@@ -23,20 +23,16 @@ export default function PoseGuide({
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (countdown !== null && countdown > 0) {
-      // Trigger scale pulse effect on each tick
-      setScale(1.2);
+      setScale(1.1);
       const scaleTimeout = setTimeout(() => setScale(1), 200);
-      
       timer = setTimeout(() => {
         setCountdown((prev) => (prev !== null ? prev - 1 : null));
       }, 1000);
-
       return () => {
         clearTimeout(timer);
         clearTimeout(scaleTimeout);
       };
     } else if (countdown === 0) {
-      // Small delay before firing onStart so the user can see "1" or "GO"
       timer = setTimeout(() => {
         onStart();
       }, 500);
@@ -48,341 +44,168 @@ export default function PoseGuide({
     setCountdown(5);
   };
 
-  // Design system colors & typography
-  const bgMain = "#f7f9f7";
-  const greenAccent = "#1a6640";
-  const borderGreen = "#e3ede5";
-  const white = "#ffffff";
-  const textDark = "#1a1a1a";
-  const textLight = "#666666";
-
-  const fontHeading = '"Fraunces", serif';
-  const fontBody = '"DM Sans", sans-serif';
+  const S = {
+    overlay: {
+      backgroundColor: 'var(--bg-medical)',
+      minHeight: '100vh',
+      padding: '2rem',
+      display: 'flex',
+      flexDirection: 'column' as const,
+    },
+    nav: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '2rem',
+    },
+    container: {
+      maxWidth: '1000px',
+      margin: '0 auto',
+      width: '100%',
+      flex: 1,
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+      gap: '2rem',
+      marginBottom: '3rem',
+    },
+    card: {
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '2rem',
+      boxShadow: 'var(--shadow-subtle)',
+    },
+    instructionStep: {
+      display: 'flex',
+      gap: '1rem',
+      alignItems: 'flex-start',
+      marginBottom: '1.25rem',
+      padding: '1rem',
+      background: 'var(--bg-medical)',
+      borderRadius: '6px',
+      border: '1px solid var(--border)',
+    },
+    stepNumber: {
+      background: 'var(--primary)',
+      color: '#fff',
+      width: '24px',
+      height: '24px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '12px',
+      fontWeight: 700,
+      flexShrink: 0,
+    },
+    btnPrimary: {
+      background: 'var(--primary)',
+      color: '#fff',
+      border: 'none',
+      padding: '16px 48px',
+      borderRadius: '6px',
+      fontSize: '1.1rem',
+      fontWeight: 600,
+      cursor: 'pointer',
+      boxShadow: 'var(--shadow-subtle)',
+      transition: 'all 0.2s',
+    }
+  };
 
   if (countdown !== null) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          backgroundColor: bgMain,
-          fontFamily: fontBody,
-        }}
-      >
-        <div
-          style={{
-            fontSize: "10rem",
-            color: greenAccent,
-            fontFamily: fontHeading,
-            fontWeight: "bold",
-            transform: `scale(${scale})`,
-            transition: "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-          }}
-        >
-          {countdown > 0 ? countdown : "1"}
+      <div style={{ ...S.overlay, justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ 
+          fontSize: '8rem', 
+          fontWeight: 800, 
+          color: 'var(--primary)', 
+          transform: `scale(${scale})`, 
+          transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)' 
+        }}>
+          {countdown > 0 ? countdown : 'GO'}
         </div>
-        <p
-          style={{
-            fontSize: "1.5rem",
-            color: textLight,
-            marginTop: "20px",
-            fontFamily: fontBody,
-            opacity: scale > 1 ? 0.8 : 1,
-            transition: "opacity 0.2s",
-          }}
-        >
-          Get ready...
+        <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginTop: '2rem', fontWeight: 500 }}>
+          Position yourself in the frame...
         </p>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: bgMain,
-        minHeight: "100vh",
-        fontFamily: fontBody,
-        color: textDark,
-        padding: "20px 40px",
-      }}
-    >
-      {/* Navbar */}
-      <nav
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "40px",
-        }}
-      >
-        <button
+    <div style={S.overlay}>
+      <nav style={S.nav}>
+        <button 
           onClick={onBack}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "1rem",
-            color: greenAccent,
-            fontWeight: "500",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
+          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
         >
-          <span style={{ fontSize: "1.2rem" }}>&larr;</span> Back
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Back
         </button>
-        <div
-          style={{
-            fontFamily: fontHeading,
-            fontSize: "1.5rem",
-            fontWeight: "bold",
-            color: greenAccent,
-          }}
-        >
-          PoseCorrect
+        <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+          <span>PoseCorrect</span>
         </div>
-        <div style={{ width: "70px" }} /> {/* Spacer to align title to center */}
+        <div style={{ width: '80px' }} />
       </nav>
 
-      {/* Header */}
-      <h1
-        style={{
-          fontFamily: fontHeading,
-          fontSize: "2.5rem",
-          fontWeight: "bold",
-          marginBottom: "8px",
-          textAlign: "center",
-          color: greenAccent,
-          marginTop: 0,
-        }}
-      >
-        {exerciseName}
-      </h1>
-      <p
-        style={{
-          textAlign: "center",
-          fontSize: "1.1rem",
-          color: textLight,
-          marginBottom: "40px",
-          marginTop: 0,
-        }}
-      >
-        Get into position before we start
-      </p>
-
-      {/* Two Columns */}
-      <div
-        style={{
-          display: "flex",
-          gap: "30px",
-          maxWidth: "1000px",
-          margin: "0 auto 40px auto",
-          flexWrap: "wrap",
-        }}
-      >
-        {/* Left Column - Image Container */}
-        <div
-          style={{
-            flex: "1 1 400px",
-            backgroundColor: white,
-            border: `1px solid ${borderGreen}`,
-            borderRadius: "16px",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              height: "450px",
-              position: "relative",
-              borderRadius: "12px",
-              overflow: "hidden",
-              marginBottom: "16px",
-              backgroundColor: "#f0f0f0",
-              boxShadow: "inset 0 2px 10px rgba(0,0,0,0.03)",
-            }}
-          >
-            {Array.isArray(poseImageSrc) && poseImageSrc.length > 0 ? (
-              <div style={{ display: 'flex', width: '100%', height: '100%', gap: '4px' }}>
-                {poseImageSrc.map((src, idx) => (
-                  <img
-                    key={idx}
-                    src={src}
-                    alt={`${exerciseName} Starting Position ${idx + 1}`}
-                    style={{ flex: 1, height: '100%', objectFit: 'cover', minWidth: 0 }}
-                  />
-                ))}
-              </div>
-            ) : poseImageSrc && typeof poseImageSrc === "string" ? (
-              <img
-                src={poseImageSrc}
-                alt={`${exerciseName} Starting Position`}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "100%",
-                  color: textLight,
-                }}
-              >
-                Pose Image Placeholder
-              </div>
-            )}
-          </div>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: "600",
-              color: greenAccent,
-              margin: 0,
-            }}
-          >
-            Starting position
-          </p>
+      <div style={S.container}>
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>{exerciseName}</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Clinical Setup & Instructions</p>
         </div>
 
-        {/* Right Column - Instructions */}
-        <div
-          style={{
-            flex: "1 1 400px",
-            backgroundColor: white,
-            border: `1px solid ${borderGreen}`,
-            borderRadius: "16px",
-            padding: "32px",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <h2
-            style={{
-              fontFamily: fontHeading,
-              fontSize: "1.5rem",
-              marginBottom: "24px",
-              marginTop: 0,
-              color: textDark,
-            }}
-          >
-            Instructions
-          </h2>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              flex: 1,
-            }}
-          >
-            {instructions.map((inst, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "16px",
-                  padding: "16px",
-                  backgroundColor: bgMain,
-                  borderRadius: "12px",
-                  border: `1px solid ${borderGreen}`,
-                }}
-              >
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    backgroundColor: greenAccent,
-                    color: white,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: "bold",
-                    flexShrink: 0,
-                    fontSize: "1.1rem",
-                  }}
-                >
-                  {index + 1}
+        <div style={S.grid}>
+          {/* Visual Guide */}
+          <div style={S.card}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1.5rem' }}>Visual Reference</h2>
+            <div style={{ background: 'var(--bg-medical)', borderRadius: '6px', overflow: 'hidden', aspectRatio: '4/3', display: 'flex' }}>
+              {Array.isArray(poseImageSrc) ? (
+                poseImageSrc.map((src, i) => (
+                  <img key={i} src={src} alt="Guide" style={{ flex: 1, width: '100%', height: '100%', objectFit: 'cover', borderRight: i < poseImageSrc.length - 1 ? '1px solid var(--border)' : 'none' }} />
+                ))
+              ) : (
+                <img src={poseImageSrc} alt="Guide" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+            </div>
+            <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '14px', fontWeight: 500, color: 'var(--primary)' }}>Proper Alignment Mode</p>
+          </div>
+
+          {/* Steps */}
+          <div style={S.card}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1.5rem' }}>Exercise Protocol</h2>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {instructions.map((inst, i) => (
+                <div key={i} style={S.instructionStep}>
+                  <div style={S.stepNumber}>{i+1}</div>
+                  <span style={{ fontSize: '14px', lineHeight: 1.5, color: 'var(--text-primary)' }}>{inst}</span>
                 </div>
-                <span
-                  style={{
-                    fontSize: "1.05rem",
-                    lineHeight: "1.5",
-                    color: textDark,
-                  }}
-                >
-                  {inst}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Camera Tip */}
-          <div
-            style={{
-              marginTop: "30px",
-              padding: "16px 20px",
-              backgroundColor: "rgba(26, 102, 64, 0.06)",
-              borderRadius: "12px",
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-            }}
-          >
-            <span style={{ fontSize: "1.5rem" }}>📷</span>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "1rem",
-                color: greenAccent,
-                fontWeight: "500",
-                lineHeight: "1.4",
-              }}
-            >
-              Make sure your full upper body is visible in the camera
-            </p>
+              ))}
+            </div>
+            <div style={{ marginTop: 'auto', display: 'flex', gap: '12px', padding: '12px', background: 'rgba(0,119,182,0.05)', borderRadius: '6px', border: '1px solid rgba(0,119,182,0.1)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+              </svg>
+              <p style={{ fontSize: '12px', color: 'var(--primary)', margin: 0, fontWeight: 500 }}>Ensure your full body is visible to the AI sensor for accurate tracking.</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Action Button */}
-      <div style={{ textAlign: "center", paddingBottom: "60px" }}>
-        <button
-          onClick={handleStart}
-          style={{
-            backgroundColor: greenAccent,
-            color: white,
-            border: "none",
-            borderRadius: "10px",
-            padding: "18px 56px",
-            fontSize: "1.25rem",
-            fontWeight: "bold",
-            cursor: "pointer",
-            fontFamily: fontBody,
-            boxShadow: "0 8px 16px rgba(26, 102, 64, 0.2)",
-            transition: "transform 0.1s ease-in-out, background-color 0.2s",
-          }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.backgroundColor = greenAccent;
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = "#134e30")
-          }
-        >
-          I am ready
-        </button>
+        <div style={{ textAlign: 'center', paddingBottom: '4rem' }}>
+          <button 
+            style={S.btnPrimary} 
+            onClick={handleStart}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            Acknowledge & Start
+          </button>
+        </div>
       </div>
     </div>
   );

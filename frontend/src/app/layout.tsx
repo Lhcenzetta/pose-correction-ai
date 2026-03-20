@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { Syne, DM_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
-});
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "KinetiCore - AI Exercise",
-  description: "AI-Powered Rehabilitation Platform",
+  title: "PoseCorrect - AI Healthcare",
+  description: "AI-Powered Rehabilitation and Exercise Correction",
 };
 
 export default function RootLayout({
@@ -23,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${syne.variable} ${dmSans.variable}`}>
-      <body className="antialiased font-body bg-bg text-text">
+    <html lang="en" className={`${inter.variable}`}>
+      <body className="antialiased font-body bg-bg-medical text-text-primary">
         {children}
       </body>
     </html>

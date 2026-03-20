@@ -40,7 +40,6 @@ export default function SessionPage() {
   const [error, setError] = useState('');
   const [hasCompletedGuide, setHasCompletedGuide] = useState(false);
 
-  // ── Load external scripts ──────────────────────────────────────
   function loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
@@ -53,7 +52,6 @@ export default function SessionPage() {
     });
   }
 
-  // ── Finalize → redirect to results ────────────────────────────
   const finalizeSession = useCallback(async (sid: number) => {
     const token = localStorage.getItem('access_token');
     try {
@@ -61,19 +59,16 @@ export default function SessionPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch { /* ignore network errors — session already saved */ }
+    } catch { /* session already saved in DB */ }
 
     if (timerRef.current) clearInterval(timerRef.current);
     if (cameraRef.current) cameraRef.current.stop();
-
     router.push('/results');
   }, [router]);
 
-  // ── Send pose frame to API ─────────────────────────────────────
   const sendPose = useCallback(async (features: number[]) => {
     if (isSendingRef.current || !sessionRef.current) return;
     isSendingRef.current = true;
-
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`${API}/process-pose`, {
@@ -87,14 +82,10 @@ export default function SessionPage() {
           features,
         }),
       });
-
       if (res.ok) {
         const data: PoseResult = await res.json();
         setResult(data);
         scoresRef.current.push(data.accuracy_score);
-      } else {
-        const err = await res.json();
-        console.error('process-pose error:', err);
       }
     } catch (e) {
       console.error('sendPose failed:', e);
@@ -103,7 +94,6 @@ export default function SessionPage() {
     }
   }, []);
 
-  // ── Feature extraction — matches backend exactly ───────────────
   function calcAngle(p1: any, p2: any, p3: any): number {
     const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
     const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
@@ -116,51 +106,41 @@ export default function SessionPage() {
   function extractFeatures(landmarks: any[]): number[] {
     const upperBodyIds = [11, 12, 13, 14, 15, 16, 23, 24];
     const features: number[] = [];
-
-    // 24 coordinate features
     upperBodyIds.forEach(id => {
       const lm = landmarks[id];
       features.push(lm.x, lm.y, lm.z);
     });
-
-    // 4 angle features
     features.push(
-      calcAngle(landmarks[11], landmarks[13], landmarks[15]), // left elbow
-      calcAngle(landmarks[12], landmarks[14], landmarks[16]), // right elbow
-      calcAngle(landmarks[23], landmarks[11], landmarks[13]), // left abduction
-      calcAngle(landmarks[24], landmarks[12], landmarks[14]), // right abduction
+      calcAngle(landmarks[11], landmarks[13], landmarks[15]),
+      calcAngle(landmarks[12], landmarks[14], landmarks[16]),
+      calcAngle(landmarks[23], landmarks[11], landmarks[13]),
+      calcAngle(landmarks[24], landmarks[12], landmarks[14]),
     );
-
-    return features; // exactly 28
+    return features;
   }
 
-  // ── MediaPipe callback ─────────────────────────────────────────
   const onResults = useCallback((results: any) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
-
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
     if (results.poseLandmarks) {
       const w = window as any;
       if (w.drawConnectors && w.POSE_CONNECTIONS) {
         w.drawConnectors(ctx, results.poseLandmarks, w.POSE_CONNECTIONS, {
-          color: 'rgba(255,255,255,0.35)',
+          color: 'rgba(0,119,182,0.6)',
           lineWidth: 2,
         });
       }
       if (w.drawLandmarks) {
         w.drawLandmarks(ctx, results.poseLandmarks, {
-          color: '#4fffb0',
+          color: '#00B4D8',
           lineWidth: 1,
-          radius: 4,
+          radius: 3,
         });
       }
-
-      // Only send to API when session is running
       if (pageStatus === 'running') {
         const features = extractFeatures(results.poseLandmarks);
         sendPose(features);
@@ -169,11 +149,9 @@ export default function SessionPage() {
     ctx.restore();
   }, [pageStatus, sendPose]);
 
-  // ── Init: load config + MediaPipe ─────────────────────────────
   useEffect(() => {
     const raw = localStorage.getItem('active_session');
     if (!raw) { router.push('/select-exercise'); return; }
-
     const parsed: SessionConfig = JSON.parse(raw);
     setConfig(parsed);
     sessionRef.current = parsed;
@@ -184,58 +162,43 @@ export default function SessionPage() {
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js');
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js');
-
         const w = window as any;
-
         const pose = new w.Pose({
-          locateFile: (file: string) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
         });
-
         pose.setOptions({
           modelComplexity: 1,
           smoothLandmarks: true,
           minDetectionConfidence: 0.5,
           minTrackingConfidence: 0.5,
         });
-
         pose.onResults(onResults);
         poseRef.current = pose;
-
         const camera = new w.Camera(videoRef.current, {
-          onFrame: async () => {
-            await pose.send({ image: videoRef.current });
-          },
+          onFrame: async () => { await pose.send({ image: videoRef.current }); },
           width: 640,
           height: 480,
         });
-
         cameraRef.current = camera;
         await camera.start();
         setPageStatus('ready');
       } catch (e) {
-        setError('Could not load camera or MediaPipe. Check your internet connection.');
-        console.error(e);
+        setError('Camera initialization failed. Please verify permissions.');
       }
     }
-
     init();
-
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (cameraRef.current) cameraRef.current.stop();
     };
   }, []);
 
-  // ── Keep onResults fresh when pageStatus changes ───────────────
   useEffect(() => {
     if (poseRef.current) poseRef.current.onResults(onResults);
   }, [onResults]);
 
-  // ── Start countdown ────────────────────────────────────────────
   function startSession() {
     setPageStatus('running');
-
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -248,264 +211,193 @@ export default function SessionPage() {
     }, 1000);
   }
 
-  // ── Format mm:ss ───────────────────────────────────────────────
   function fmtTime(s: number) {
     return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
   }
 
-  const totalSeconds = config?.duration_seconds || 1;
-  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
-
-  // ── Styles ─────────────────────────────────────────────────────
-  const S: Record<string, React.CSSProperties> = {
+  const S = {
     page: {
-      fontFamily: "'DM Sans', sans-serif",
-      background: '#f7f9f7',
+      backgroundColor: 'var(--bg-medical)',
       minHeight: '100vh',
     },
     nav: {
-      background: '#fff',
-      borderBottom: '1px solid #e3ede5',
-      padding: '1rem 2rem',
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      padding: '0.75rem 2rem',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      position: 'sticky',
-      top: 0,
-      zIndex: 10,
     },
     main: {
-      maxWidth: 1020,
+      maxWidth: '1200px',
       margin: '0 auto',
       padding: '2rem',
       display: 'grid',
-      gridTemplateColumns: '1fr 310px',
-      gap: '1.5rem',
-      alignItems: 'start',
+      gridTemplateColumns: '1fr 340px',
+      gap: '2rem',
     },
-    videoWrap: {
-      background: '#0f1f13',
-      borderRadius: 20,
+    camWrap: {
+      background: '#000',
+      borderRadius: '8px',
       overflow: 'hidden',
-      position: 'relative',
-      aspectRatio: '4/3',
+      position: 'relative' as const,
+      aspectRatio: '16/9',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
     },
     sidebar: {
       display: 'flex',
-      flexDirection: 'column',
-      gap: '1rem',
+      flexDirection: 'column' as const,
+      gap: '1.25rem',
     },
     card: {
-      background: '#fff',
-      border: '1px solid #e3ede5',
-      borderRadius: 16,
-      padding: '1.25rem 1.5rem',
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '1.5rem',
+      boxShadow: 'var(--shadow-subtle)',
     },
-    sectionLabel: {
-      fontSize: 11,
+    metricLabel: {
+      fontSize: '10px',
+      fontWeight: 600,
       textTransform: 'uppercase' as const,
-      letterSpacing: '0.08em',
-      color: '#8aaa90',
-      marginBottom: 8,
+      letterSpacing: '0.05em',
+      color: 'var(--text-secondary)',
+      marginBottom: '8px',
     },
+    metricValue: {
+      fontSize: '2rem',
+      fontWeight: 700,
+      color: 'var(--text-primary)',
+    }
   };
 
-  // ── Render ─────────────────────────────────────────────────────
   return (
     <>
       <div style={S.page}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        @media (max-width: 700px) {
-          .sess-main { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
-
-      {/* Navbar */}
-      <nav style={S.nav}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: '#1a6640' }}>
-          Pose<span style={{ color: '#b5cfb9' }}>Correct</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 12, color: '#8aaa90' }}>{config?.exercise_name}</span>
-          {pageStatus === 'running' && (
-            <span style={{ fontSize: 12, background: '#e8f4ec', color: '#1a6640', padding: '4px 12px', borderRadius: 100, fontWeight: 500, animation: 'pulse 2s infinite' }}>
-              ● Live
-            </span>
-          )}
-        </div>
-      </nav>
-
-      {/* Main grid */}
-      <main className="sess-main" style={S.main}>
-
-        {/* ── Webcam panel ── */}
-        <div style={S.videoWrap}>
-          <video ref={videoRef} style={{ display: 'none' }} />
-          <canvas
-            ref={canvasRef}
-            width={640}
-            height={480}
-            style={{ width: '100%', height: '100%', display: 'block' }}
-          />
-
-          {/* Loading / ready overlay */}
-          {pageStatus !== 'running' && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,31,19,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 14 }}>
-              {pageStatus === 'loading' && (
-                <>
-                  <div style={{ width: 34, height: 34, border: '2px solid rgba(79,255,176,0.25)', borderTopColor: '#4fffb0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <span style={{ color: '#b5cfb9', fontSize: 13, fontWeight: 300 }}>Loading camera...</span>
-                </>
-              )}
-              {pageStatus === 'ready' && (
-                <>
-                  <div style={{ fontSize: '2.5rem' }}>📷</div>
-                  <span style={{ color: '#e8f2ec', fontSize: 15, fontWeight: 500 }}>Camera ready</span>
-                  <span style={{ color: '#8aaa90', fontSize: 12, fontWeight: 300 }}>Stand in frame, then press Start</span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Timer badge on canvas */}
-          {pageStatus === 'running' && (
-            <div style={{ position: 'absolute', top: 14, left: 14, background: 'rgba(15,31,19,0.8)', borderRadius: 12, padding: '6px 16px', backdropFilter: 'blur(4px)' }}>
-              <span style={{ fontFamily: "'Fraunces', serif", fontSize: '1.6rem', fontWeight: 600, color: timeLeft <= 10 ? '#ffaa00' : '#4fffb0', letterSpacing: -1 }}>
-                {fmtTime(timeLeft)}
-              </span>
-            </div>
-          )}
-
-          {/* Live feedback bar on canvas */}
-          {pageStatus === 'running' && result && (
-            <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14, background: result.is_correct ? 'rgba(26,102,64,0.88)' : 'rgba(160,40,20,0.88)', borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(4px)' }}>
-              <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{result.tip}</span>
-              <span style={{ fontSize: 13, color: result.is_correct ? '#9de8c0' : '#ffaa88', fontWeight: 600, fontFamily: "'Fraunces', serif" }}>
-                {Math.round(result.accuracy_score)}%
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* ── Sidebar ── */}
-        <div style={S.sidebar}>
-
-          {/* Timer card */}
-          <div style={S.card}>
-            <div style={S.sectionLabel}>Time remaining</div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '3rem', fontWeight: 600, color: timeLeft <= 10 && pageStatus === 'running' ? '#b06a00' : '#0f1f13', letterSpacing: -2, lineHeight: 1, textAlign: 'center' }}>
-              {fmtTime(timeLeft)}
-            </div>
-            <div style={{ marginTop: '1rem', height: 5, background: '#e8f4ec', borderRadius: 100, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: '#1a6640', borderRadius: 100, transition: 'width 1s linear' }} />
-            </div>
+        <style>{`
+          @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+          .live-indicator { animation: flash 1.5s infinite; }
+        `}</style>
+        
+        <nav style={S.nav}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem' }}>PoseCorrect</div>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>{config?.exercise_name}</div>
           </div>
+          {pageStatus === 'running' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239,68,68,0.1)', padding: '6px 12px', borderRadius: '4px' }}>
+              <div className="live-indicator" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#EF4444', textTransform: 'uppercase' }}>Session in Progress</span>
+            </div>
+          )}
+        </nav>
 
-          {/* Live accuracy card */}
-          <div style={S.card}>
-            <div style={S.sectionLabel}>Live accuracy</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '2.5rem', fontWeight: 600, letterSpacing: -1, color: result ? (result.is_correct ? '#1a6640' : '#b06a00') : '#c3d9c7' }}>
-                {result ? `${Math.round(result.accuracy_score)}%` : '—'}
-              </div>
-              {result && (
-                <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 100, fontWeight: 500, background: result.is_correct ? '#e8f4ec' : '#fef3e2', color: result.is_correct ? '#1a6640' : '#b06a00' }}>
-                  {result.is_correct ? 'Correct' : 'Adjust'}
-                </span>
+        <main style={S.main}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={S.camWrap}>
+              <video ref={videoRef} style={{ display: 'none' }} />
+              <canvas ref={canvasRef} width={640} height={480} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              
+              {pageStatus !== 'running' && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#fff' }}>
+                  {pageStatus === 'loading' ? 'CALIBRATING SENSOR...' : 'SENSOR READY'}
+                </div>
+              )}
+
+              {pageStatus === 'running' && result && (
+                <div style={{ position: 'absolute', top: '20px', left: '20px', background: 'rgba(0,0,0,0.7)', padding: '10px 16px', borderRadius: '4px', borderLeft: `4px solid ${result.is_correct ? 'var(--success)' : '#EF4444'}` }}>
+                  <div style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 600 }}>Clinical Advice</div>
+                  <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>{result.tip}</div>
+                </div>
               )}
             </div>
 
-            {/* Confidence bar */}
-            {result && (
-              <div style={{ marginTop: 10, height: 4, background: '#e8f4ec', borderRadius: 100, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${result.confidence * 100}%`, background: result.is_correct ? '#1a6640' : '#b06a00', borderRadius: 100, transition: 'width 0.3s ease' }} />
+            {pageStatus === 'running' && (
+              <div style={{ ...S.card, display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={S.metricLabel}>Session Progress</div>
+                  <div style={{ height: '8px', background: 'var(--bg-medical)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${((config!.duration_seconds - timeLeft) / config!.duration_seconds) * 100}%`, background: 'var(--primary)', transition: 'width 1s linear' }} />
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={S.metricLabel}>Time Elapsed</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{fmtTime(config!.duration_seconds - timeLeft)} / {fmtTime(config!.duration_seconds)}</div>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Arm angles card */}
-          {result && (
+          <aside style={S.sidebar}>
             <div style={S.card}>
-              <div style={S.sectionLabel}>Arm angles</div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {([['Left', result.left_abduction], ['Right', result.right_abduction]] as [string, number][]).map(([side, angle]) => (
-                  <div key={side} style={{ flex: 1, textAlign: 'center', background: '#f7f9f7', borderRadius: 12, padding: '0.75rem 0.5rem' }}>
-                    <div style={{ fontSize: 11, color: '#8aaa90', marginBottom: 4 }}>{side}</div>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.5rem', fontWeight: 600, color: angle >= 70 ? '#1a6640' : '#b06a00', letterSpacing: -0.5 }}>
-                      {Math.round(angle)}°
-                    </div>
-                    <div style={{ marginTop: 6, height: 4, background: '#e3ede5', borderRadius: 100, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min((angle / 180) * 100, 100)}%`, background: angle >= 70 ? '#1a6640' : '#b06a00', borderRadius: 100 }} />
-                    </div>
-                  </div>
-                ))}
+              <div style={S.metricLabel}>Correction Score</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <div style={S.metricValue}>{result ? `${Math.round(result.accuracy_score)}%` : '—'}</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: result?.is_correct ? 'var(--success)' : '#EF4444' }}>
+                  {result?.is_correct ? 'OPTIMAL' : 'ADJUST'}
+                </div>
               </div>
-              <p style={{ fontSize: 11, color: '#b5cfb9', textAlign: 'center', marginTop: 8, fontWeight: 300 }}>
-                Target: raise arms to 90°
-              </p>
             </div>
-          )}
 
-          {/* Feedback tip card */}
-          {result && (
-            <div style={{ ...S.card, background: result.is_correct ? '#f0f9f3' : '#fef8f0', borderColor: result.is_correct ? '#c3d9c7' : '#f5c4a0' }}>
-              <div style={S.sectionLabel}>Feedback</div>
-              <p style={{ fontSize: 13, color: result.is_correct ? '#1a6640' : '#b06a00', lineHeight: 1.65, fontWeight: 300 }}>
-                {result.tip}
-              </p>
+            <div style={S.card}>
+              <div style={S.metricLabel}>Time Remaining</div>
+              <div style={{ ...S.metricValue, color: timeLeft <= 10 && pageStatus === 'running' ? '#EF4444' : 'var(--text-primary)' }}>
+                {fmtTime(timeLeft)}
+              </div>
             </div>
-          )}
 
-          {/* Error */}
-          {error && (
-            <div style={{ background: '#fef3e2', border: '1px solid #f5c4a0', borderRadius: 12, padding: '12px 14px', fontSize: 12, color: '#b06a00' }}>
-              {error}
+            {result && (
+              <div style={S.card}>
+                <div style={S.metricLabel}>Clinical Metrics</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Left Abduction</span>
+                    <span style={{ fontSize: '14px', fontWeight: 700 }}>{Math.round(result.left_abduction)}°</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Right Abduction</span>
+                    <span style={{ fontSize: '14px', fontWeight: 700 }}>{Math.round(result.right_abduction)}°</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ ...S.card, background: 'var(--bg-medical)', border: '1px dashed var(--border)' }}>
+              <div style={S.metricLabel}>Sensor Status</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: pageStatus !== 'loading' ? 'var(--success)' : '#F59E0B' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600 }}>{pageStatus === 'loading' ? 'SYNCING...' : 'ONLINE'}</span>
+              </div>
             </div>
-          )}
 
-          {/* Start button */}
-          {pageStatus === 'ready' && (
-            <button
-              onClick={startSession}
-              style={{ width: '100%', background: '#1a6640', color: '#fff', border: 'none', padding: '14px', borderRadius: 100, fontSize: 15, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}
-            >
-              ▶ Start session
-            </button>
-          )}
-
-          {pageStatus === 'loading' && (
-            <button
-              disabled
-              style={{ width: '100%', background: '#e3ede5', color: '#b5cfb9', border: 'none', padding: '14px', borderRadius: 100, fontSize: 15, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: 'not-allowed' }}
-            >
-              Loading camera...
-            </button>
-          )}
-        </div>
-      </main>
+            {pageStatus === 'ready' && (
+              <button 
+                onClick={startSession}
+                style={{ background: 'var(--primary)', color: '#fff', border: 'none', padding: '14px', borderRadius: '6px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: 'auto' }}
+              >
+                Launch Protocol
+              </button>
+            )}
+          </aside>
+        </main>
       </div>
 
       {!hasCompletedGuide && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, overflow: 'auto', background: '#f7f9f7' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, overflow: 'auto' }}>
           <PoseGuide
-            exerciseName={config?.exercise_name || 'Loading...'}
+            exerciseName={config?.exercise_name || 'Protocol'}
             poseImageSrc={[
               "/Gemini_Generated_Image_cdr8a4cdr8a4cdr8.png",
               "/Gemini_Generated_Image_l281ndl281ndl281.png"
             ]}
             instructions={[
-              "Stand up straight facing the camera with your body fully visible.",
-              "Keep your arms resting at zero degrees initially.",
-              "Move your arm up steadily to 90 degrees.",
-              "Bring your arm back down to the resting zero position smoothly."
+              "Orient your device so your full upper body is visible.",
+              "Adopt a neutral standing posture with shoulders relaxed.",
+              "Follow the on-screen tips for precise joint alignment.",
+              "Maintain steady controlled movements throughout."
             ]}
-            onStart={() => {
-              setHasCompletedGuide(true);
-              startSession();
-            }}
+            onStart={() => { setHasCompletedGuide(true); startSession(); }}
             onBack={() => router.push('/select-exercise')}
           />
         </div>

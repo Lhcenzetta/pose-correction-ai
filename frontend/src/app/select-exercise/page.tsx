@@ -12,15 +12,6 @@ interface Exercise {
   duration_time: number;
 }
 
-function exerciseIcon(name = '') {
-  const n = name.toLowerCase();
-  if (n.includes('shoulder')) return '💪';
-  if (n.includes('arm')) return '🦾';
-  if (n.includes('squat')) return '🏋️';
-  if (n.includes('lunge')) return '🦵';
-  return '🏃';
-}
-
 const SOON: Exercise[] = [
   { id: -1, name: 'Squats', description: 'Lower your hips from a standing position to strengthen legs and core.', duration_time: 0 },
 ];
@@ -34,7 +25,6 @@ export default function SelectExercisePage() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-
     if (!token) {
       router.push('/login');
       return;
@@ -52,7 +42,7 @@ export default function SelectExercisePage() {
         setExercises(list);
       })
       .catch(() => {
-        setError('Could not load exercises. Is your API running?');
+        setError('Could not load exercises. Please try again later.');
         setExercises([]);
       })
       .finally(() => setLoading(false));
@@ -66,13 +56,14 @@ export default function SelectExercisePage() {
 
   const S = {
     page: {
-      fontFamily: "'DM Sans', sans-serif",
-      background: '#f7f9f7',
+      backgroundColor: 'var(--bg-medical)',
       minHeight: '100vh',
-    } as React.CSSProperties,
+      display: 'flex',
+      flexDirection: 'column' as const,
+    },
     nav: {
-      background: '#fff',
-      borderBottom: '1px solid #e3ede5',
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
       padding: '1rem 2rem',
       display: 'flex',
       alignItems: 'center',
@@ -82,149 +73,160 @@ export default function SelectExercisePage() {
       zIndex: 10,
     },
     main: {
-      maxWidth: 700,
+      maxWidth: '800px',
       margin: '0 auto',
       padding: '3rem 2rem',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      alignItems: 'center',
+      width: '100%',
     },
     grid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '1rem',
-      width: '100%',
-      marginBottom: '2rem',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+      gap: '1.5rem',
+      marginBottom: '3rem',
     },
-    card: (isSelected: boolean, disabled: boolean): React.CSSProperties => ({
-      background: isSelected ? '#f0f9f3' : '#fff',
-      border: `1.5px solid ${isSelected ? '#1a6640' : '#e3ede5'}`,
-      borderRadius: 18,
+    card: (isSelected: boolean, disabled: boolean) => ({
+      background: 'var(--surface)',
+      border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+      borderRadius: '8px',
       padding: '1.5rem',
       cursor: disabled ? 'not-allowed' : 'pointer',
-      opacity: disabled ? 0.5 : 1,
+      opacity: disabled ? 0.6 : 1,
       transition: 'all 0.2s',
-      boxShadow: isSelected ? '0 0 0 3px rgba(26,102,64,0.08)' : 'none',
+      position: 'relative' as const,
+      display: 'flex',
+      flexDirection: 'column' as const,
+      boxShadow: isSelected ? '0 0 0 1px var(--primary), var(--shadow-subtle)' : 'var(--shadow-subtle)',
     }),
-    btnContinue: (enabled: boolean): React.CSSProperties => ({
-      background: enabled ? '#1a6640' : '#e3ede5',
-      color: enabled ? '#fff' : '#b5cfb9',
+    badge: {
+      fontSize: '10px',
+      padding: '2px 8px',
+      borderRadius: '4px',
+      fontWeight: 600,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.05em',
+    },
+    btnContinue: (enabled: boolean) => ({
+      background: enabled ? 'var(--primary)' : 'var(--border)',
+      color: enabled ? '#fff' : 'var(--text-secondary)',
       border: 'none',
-      padding: '14px 48px',
-      borderRadius: 100,
-      fontSize: 15,
+      padding: '12px 32px',
+      borderRadius: '6px',
+      fontSize: '14px',
       fontWeight: 500,
-      fontFamily: "'DM Sans', sans-serif",
       cursor: enabled ? 'pointer' : 'not-allowed',
       transition: 'all 0.2s',
-    }),
+      display: 'block',
+      margin: '0 auto',
+    })
   };
 
   return (
     <div style={S.page}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');
-        .ex-card:hover { border-color: #9dc9aa !important; transform: translateY(-2px); box-shadow: 0 4px 20px rgba(26,102,64,0.08) !important; }
-        .ex-card-disabled:hover { transform: none !important; }
-      `}</style>
-
-      {/* Navbar */}
       <nav style={S.nav}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: '#1a6640' }}>
-          Pose<span style={{ color: '#b5cfb9' }}>Correct</span>
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', cursor: 'pointer' }}
+          onClick={() => router.push('/')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+          <span>PoseCorrect</span>
         </div>
         <button
           onClick={() => router.push('/dashboard')}
-          style={{ fontSize: 12, color: '#8aaa90', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+          style={{ fontSize: '13px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
         >
-          ← Back to dashboard
+          Back to Dashboard
         </button>
       </nav>
 
       <main style={S.main}>
-        {/* Header */}
-        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a6640', marginBottom: 6 }}>
-          Step 1 of 2
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Step 1 of 2</span>
+          <h1 style={{ fontSize: '2rem', fontWeight: 600, marginTop: '0.5rem', marginBottom: '1rem' }}>Select Exercise</h1>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto' }}>
+            Choose the specific rehabilitation routine prescribed for your recovery program.
+          </p>
         </div>
-        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '2rem', fontWeight: 600, color: '#0f1f13', letterSpacing: -1, textAlign: 'center', marginBottom: 8 }}>
-          Select exercise
-        </h1>
-        <p style={{ fontSize: 13, color: '#8aaa90', fontWeight: 300, textAlign: 'center', marginBottom: '2.5rem' }}>
-          Choose the exercise prescribed by your doctor or physiotherapist
-        </p>
 
-        {/* Error */}
         {error && (
-          <div style={{ background: '#fef3e2', border: '1px solid #f5c4a0', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#b06a00', marginBottom: '1.5rem', width: '100%' }}>
+          <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px', borderRadius: '6px', fontSize: '13px', marginBottom: '2rem' }}>
             {error}
           </div>
         )}
 
-        {/* Grid */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#b5cfb9', fontSize: 13 }}>
-            Loading exercises...
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
+            Loading recommended exercises...
           </div>
         ) : (
           <div style={S.grid}>
-
-            {/* Available — from API */}
             {exercises.map(ex => (
               <div
                 key={ex.id}
-                className="ex-card"
-                style={S.card(selected?.id === ex.id, false)}
+                style={S.card(selected?.id === ex.id, false) as any}
                 onClick={() => setSelected(ex)}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <div style={{ width: 46, height: 46, background: selected?.id === ex.id ? '#d0ebd8' : '#e8f4ec', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                    {exerciseIcon(ex.name)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div style={{ background: 'var(--bg-medical)', color: 'var(--primary)', padding: '10px', borderRadius: '8px' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 15V18H6V15" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 100, fontWeight: 500, background: '#e8f4ec', color: '#1a6640' }}>
-                      Available
-                    </span>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', border: `1.5px solid ${selected?.id === ex.id ? '#1a6640' : '#c3d9c7'}`, background: selected?.id === ex.id ? '#1a6640' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: selected?.id === ex.id ? '#fff' : 'transparent', transition: 'all 0.2s', flexShrink: 0 }}>
-                      ✓
-                    </div>
+                  <span style={{ ...S.badge, background: 'var(--success)', color: '#fff' }}>Available</span>
+                </div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{ex.name}</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, flex: 1 }}>
+                  {ex.description}
+                </p>
+                <div style={{ marginTop: '1.5rem', fontSize: '12px', color: 'var(--primary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {ex.duration_time} min recommended
+                </div>
+                {selected?.id === ex.id && (
+                  <div style={{ position: 'absolute', top: '1rem', right: '1rem', color: 'var(--primary)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
                   </div>
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: '#0f1f13', marginBottom: 6 }}>{ex.name}</div>
-                <div style={{ fontSize: 12, color: '#7a9a80', lineHeight: 1.6, fontWeight: 300 }}>
-                  {ex.description?.slice(0, 90)}{ex.description?.length > 90 ? '...' : ''}
-                </div>
-                {ex.duration_time > 0 && (
-                  <div style={{ fontSize: 11, color: '#8aaa90', marginTop: 10 }}>⏱ {ex.duration_time} min recommended</div>
                 )}
               </div>
             ))}
 
-            {/* Soon — static placeholders */}
             {SOON.map(ex => (
-              <div key={ex.id} className="ex-card ex-card-disabled" style={S.card(false, true)}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <div style={{ width: 46, height: 46, background: '#e8f4ec', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                    {exerciseIcon(ex.name)}
+              <div key={ex.id} style={S.card(false, true) as any}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div style={{ background: '#F1F5F9', color: '#94A3B8', padding: '10px', borderRadius: '8px' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
                   </div>
-                  <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 100, fontWeight: 500, background: '#f3f3f3', color: '#8aaa90' }}>
-                    Soon
-                  </span>
+                  <span style={{ ...S.badge, background: '#F1F5F9', color: '#64748B' }}>Coming Soon</span>
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: '#0f1f13', marginBottom: 6 }}>{ex.name}</div>
-                <div style={{ fontSize: 12, color: '#7a9a80', lineHeight: 1.6, fontWeight: 300 }}>{ex.description}</div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: '#94A3B8' }}>{ex.name}</h3>
+                <p style={{ fontSize: '13px', color: '#94A3B8', lineHeight: 1.5 }}>
+                  {ex.description}
+                </p>
               </div>
             ))}
-
           </div>
         )}
 
-        {/* CTA */}
-        <button style={S.btnContinue(!!selected)} disabled={!selected} onClick={handleContinue}>
-          Continue →
-        </button>
-        <span style={{ fontSize: 12, color: '#b5cfb9', marginTop: 10, fontWeight: 300 }}>
-          {selected ? `"${selected.name}" selected` : 'Select an exercise to continue'}
-        </span>
+        <div style={{ textAlign: 'center' }}>
+          <button style={S.btnContinue(!!selected) as any} disabled={!selected} onClick={handleContinue}>
+            Continue
+          </button>
+          {!selected && (
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '1rem' }}>
+              Please select an exercise to proceed to session setup.
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );

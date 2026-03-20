@@ -6,29 +6,6 @@ import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// ── Move static styles outside component so they never recreate ──
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#f7f9f7',
-  border: '1.5px solid #e3ede5',
-  borderRadius: 12,
-  padding: '12px 16px',
-  fontSize: 14,
-  fontFamily: "'DM Sans', sans-serif",
-  color: '#0f1f13',
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.2s',
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  fontWeight: 500,
-  color: '#3a5a42',
-  marginBottom: 6,
-};
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail]       = useState('');
@@ -36,28 +13,87 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
 
+  const S = {
+    page: {
+      backgroundColor: 'var(--bg-medical)',
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
+    },
+    card: {
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '2.5rem',
+      width: '100%',
+      maxWidth: '400px',
+      boxShadow: 'var(--shadow-subtle)',
+    },
+    label: {
+      display: 'block',
+      fontSize: '10px',
+      fontWeight: 600,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.05em',
+      color: 'var(--text-secondary)',
+      marginBottom: '6px',
+    },
+    input: {
+      width: '100%',
+      background: '#fff',
+      border: '1px solid var(--border)',
+      borderRadius: '6px',
+      padding: '10px 14px',
+      fontSize: '14px',
+      color: 'var(--text-primary)',
+      outline: 'none',
+      marginBottom: '1rem',
+      transition: 'border-color 0.2s',
+    },
+    btnPrimary: {
+      width: '100%',
+      background: 'var(--primary)',
+      color: '#fff',
+      border: 'none',
+      padding: '12px',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: 500,
+      cursor: 'pointer',
+      transition: 'opacity 0.2s',
+      marginTop: '1rem',
+    },
+    logo: {
+      textAlign: 'center' as const,
+      fontWeight: 700,
+      fontSize: '1.5rem',
+      color: 'var(--primary)',
+      marginBottom: '2rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      cursor: 'pointer',
+    }
+  };
+
   async function handleLogin() {
     if (!email.trim() || !password) {
       setError('Please fill in all fields.');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       const res = await fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.detail || 'Invalid email or password.');
-      }
-
+      if (!res.ok) throw new Error(data.detail || 'Invalid email or password.');
       localStorage.setItem('access_token', data.access_token);
       router.push('/dashboard');
     } catch (e: any) {
@@ -68,119 +104,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#f7f9f7', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+    <div style={S.page}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');
-        input:focus { border-color: #1a6640 !important; box-shadow: 0 0 0 3px rgba(26,102,64,0.08); }
+        input:focus { border-color: var(--primary) !important; }
+        .btn-hover:hover { opacity: 0.9; }
       `}</style>
-
-      <div style={{ background: '#fff', border: '1px solid #e3ede5', borderRadius: 24, padding: '2.5rem', width: '100%', maxWidth: 420, boxShadow: '0 8px 40px rgba(26,102,64,0.07)' }}>
-
-        {/* Back */}
-        <button
-          onClick={() => router.push('/')}
-          style={{ background: 'none', border: 'none', fontSize: 12, color: '#8aaa90', cursor: 'pointer', marginBottom: '1.75rem', fontFamily: "'DM Sans', sans-serif", padding: 0 }}
-        >
-          ← Back to home
-        </button>
-
-        {/* Badge */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#e8f4ec', color: '#1a6640', padding: '4px 12px', borderRadius: 100, fontSize: 11, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1a6640' }} />
-          Rehabilitation platform
+      <div style={S.card}>
+        <div style={S.logo} onClick={() => router.push('/')}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+          <span>PoseCorrect</span>
         </div>
 
-        {/* Title */}
-        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.9rem', fontWeight: 600, color: '#0f1f13', letterSpacing: -1, marginBottom: '0.4rem', lineHeight: 1.1 }}>
-          Welcome <em style={{ color: '#1a6640', fontStyle: 'italic', fontWeight: 300 }}>back</em>
-        </h1>
-        <p style={{ fontSize: 13, color: '#8aaa90', marginBottom: '2rem', fontWeight: 300, lineHeight: 1.6 }}>
-          Sign in to continue your rehabilitation program.
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', textAlign: 'center' }}>Patient Login</h1>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '2rem' }}>
+          Access your rehabilitation program
         </p>
 
-        {/* Error banner */}
         {error && (
-          <div style={{ background: '#fef3e2', border: '1px solid #f5c4a0', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#b06a00', marginBottom: '1.25rem' }}>
+          <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '10px', borderRadius: '6px', fontSize: '12px', marginBottom: '1.5rem' }}>
             {error}
           </div>
         )}
 
-        {/* Email */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={labelStyle}>Email address</label>
+        <div>
+          <label style={S.label}>Email Address</label>
           <input
             type="email"
-            placeholder="lahcen@example.com"
+            placeholder="name@example.com"
             value={email}
-            onChange={e => { setEmail(e.target.value); setError(''); }}
-            onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            style={inputStyle}
+            onChange={e => setEmail(e.target.value)}
+            style={S.input}
           />
         </div>
 
-        {/* Password */}
-        <div style={{ marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
-            <button
-              type="button"
-              style={{ background: 'none', border: 'none', fontSize: 12, color: '#1a6640', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0, fontWeight: 500 }}
-            >
-              Forgot password?
-            </button>
-          </div>
+        <div>
+          <label style={S.label}>Password</label>
           <input
             type="password"
             placeholder="••••••••"
             value={password}
-            onChange={e => { setPassword(e.target.value); setError(''); }}
-            onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            style={inputStyle}
+            onChange={e => setPassword(e.target.value)}
+            style={S.input}
           />
         </div>
 
-        {/* Remember me */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.5rem' }}>
-          <input
-            type="checkbox"
-            id="remember"
-            style={{ accentColor: '#1a6640', width: 14, height: 14, cursor: 'pointer' }}
-          />
-          <label htmlFor="remember" style={{ fontSize: 12, color: '#8aaa90', cursor: 'pointer' }}>
-            Remember me
-          </label>
-        </div>
-
-        {/* Submit */}
         <button
-          type="button"
+          className="btn-hover"
+          style={S.btnPrimary}
           disabled={loading}
           onClick={handleLogin}
-          style={{
-            width: '100%',
-            background: loading ? '#e3ede5' : '#1a6640',
-            color: loading ? '#b5cfb9' : '#fff',
-            border: 'none',
-            padding: 14,
-            borderRadius: 100,
-            fontSize: 15,
-            fontWeight: 500,
-            fontFamily: "'DM Sans', sans-serif",
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s',
-          }}
         >
-          {loading ? 'Signing in...' : 'Sign in →'}
+          {loading ? 'Authenticating...' : 'Sign In'}
         </button>
 
-        {/* Register link */}
-        <p style={{ textAlign: 'center', fontSize: 13, color: '#8aaa90', marginTop: '1.25rem' }}>
-          No account?{' '}
-          <Link href="/register" style={{ color: '#1a6640', fontWeight: 500, textDecoration: 'none' }}>
-            Create one
-          </Link>
+        <p style={{ textAlign: 'center', fontSize: '13px', marginTop: '1.5rem', color: 'var(--text-secondary)' }}>
+          Don't have an account?{' '}
+          <Link href="/register" style={{ color: 'var(--primary)', fontWeight: 500, textDecoration: 'none' }}>Register</Link>
         </p>
-
       </div>
     </div>
   );

@@ -22,18 +22,18 @@ interface Feedback {
 }
 
 function scoreColor(score: number | null) {
-  if (score == null) return '#b5cfb9';
-  if (score >= 85) return '#1a6640';
-  if (score >= 70) return '#3a8a58';
-  return '#b06a00';
+  if (score == null) return 'var(--text-secondary)';
+  if (score >= 85) return 'var(--success)';
+  if (score >= 70) return 'var(--primary)';
+  return '#F59E0B';
 }
 
 function scoreLabel(score: number | null) {
   if (score == null) return 'No data';
-  if (score >= 90) return 'Excellent form!';
-  if (score >= 75) return 'Good work, keep it up';
-  if (score >= 60) return 'Getting there, keep practising';
-  return 'Needs improvement — keep going';
+  if (score >= 90) return 'Exceptional Control';
+  if (score >= 75) return 'Strong Performance';
+  if (score >= 60) return 'Developing Form';
+  return 'Technique Adjustment Recommended';
 }
 
 function fmtDuration(secs: number) {
@@ -61,29 +61,24 @@ export default function ResultsPage() {
 
     async function load() {
       try {
-        // 1. Get current user
         const meRes = await fetch(`${API}/me`, { headers });
-        if (!meRes.ok) throw new Error('Auth failed');
+        if (!meRes.ok) throw new Error('Authentication expired');
         const me = await meRes.json();
 
-        // 2. Get all sessions
         const sessRes = await fetch(`${API}/sessions/user/${me.id}`, { headers });
-        if (!sessRes.ok) throw new Error('Could not load sessions');
+        if (!sessRes.ok) throw new Error('Failed to retrieve clinical data');
         const allSessions: SessionResult[] = await sessRes.json();
 
-        // 3. Find current session
         const current = allSessions.find(s => s.id === active.session_id);
-        if (!current) throw new Error('Session not found');
+        if (!current) throw new Error('Session record not found');
         setSession(current);
 
-        // 4. Fetch feedback for this session
         const fbRes = await fetch(`${API}/feedback/${active.session_id}`, { headers });
         if (fbRes.ok) {
           const fbData: Feedback[] = await fbRes.json();
           if (fbData.length > 0) setFeedback(fbData[0]);
         }
 
-        // 5. Find previous session for comparison
         const others = allSessions
           .filter(s => s.id !== active.session_id && s.accuracy_score != null)
           .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
@@ -95,7 +90,6 @@ export default function ResultsPage() {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
@@ -103,224 +97,168 @@ export default function ResultsPage() {
   const diff = score != null && prevScore != null ? Math.round(score - prevScore) : null;
   const color = scoreColor(score);
 
-  const S: Record<string, React.CSSProperties> = {
-    page: { fontFamily: "'DM Sans', sans-serif", background: '#f7f9f7', minHeight: '100vh' },
-    nav: { background: '#fff', borderBottom: '1px solid #e3ede5', padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 },
-    main: { maxWidth: 720, margin: '0 auto', padding: '3rem 2rem' },
-    card: { background: '#fff', border: '1px solid #e3ede5', borderRadius: 16, padding: '1.25rem 1.5rem' },
-    label: { fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: '#8aaa90', marginBottom: 6 },
-    statVal: { fontFamily: "'Fraunces', serif", fontWeight: 600, letterSpacing: -1, lineHeight: 1 },
+  const S = {
+    page: {
+      backgroundColor: 'var(--bg-medical)',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column' as const,
+    },
+    nav: {
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      padding: '1rem 2rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    main: {
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: '3rem 2rem',
+      width: '100%',
+    },
+    card: {
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '2rem',
+      boxShadow: 'var(--shadow-subtle)',
+    },
+    metricBox: {
+      textAlign: 'center' as const,
+      padding: '1.5rem',
+      background: 'var(--bg-medical)',
+      borderRadius: '6px',
+      border: '1px solid var(--border)',
+    },
+    label: {
+      fontSize: '10px',
+      fontWeight: 600,
+      color: 'var(--text-secondary)',
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.05em',
+      marginBottom: '8px',
+    },
+    btnPrimary: {
+      background: 'var(--primary)',
+      color: '#fff',
+      border: 'none',
+      padding: '14px 28px',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: 600,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+    },
+    btnSecondary: {
+      background: 'var(--surface)',
+      color: 'var(--text-primary)',
+      border: '1px solid var(--border)',
+      padding: '14px 28px',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: 600,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+    }
   };
 
-  const Logo = () => (
-    <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: '#1a6640' }}>
-      Pose<span style={{ color: '#b5cfb9' }}>Correct</span>
-    </div>
-  );
-
-  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) return (
     <div style={S.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
-      <nav style={S.nav}><Logo /></nav>
-      <div style={{ textAlign: 'center', padding: '5rem', color: '#b5cfb9', fontSize: 13 }}>
-        Loading results...
+      <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        Processing clinical results...
       </div>
     </div>
   );
 
-  // ── Error state ────────────────────────────────────────────────────────────
-  if (error) return (
-    <div style={S.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
-      <nav style={S.nav}><Logo /></nav>
-      <div style={{ textAlign: 'center', padding: '5rem' }}>
-        <div style={{ color: '#b06a00', fontSize: 13, marginBottom: '1rem' }}>{error}</div>
-        <button
-          onClick={() => router.push('/dashboard')}
-          style={{ background: '#1a6640', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-        >
-          Go to dashboard
-        </button>
-      </div>
-    </div>
-  );
-
-  // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div style={S.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap');`}</style>
-
       <nav style={S.nav}>
-        <Logo />
-        <span style={{ fontSize: 12, color: '#8aaa90' }}>{session?.exercise_name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
+          <span>PoseCorrect</span>
+        </div>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-medical)', padding: '4px 12px', borderRadius: '100px' }}>
+          Final Report: {session?.exercise_name}
+        </div>
       </nav>
 
       <main style={S.main}>
-
-        {/* ── Hero score ──────────────────────────────────────────────────── */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1a6640', marginBottom: '1rem' }}>
-            ✦ Session complete ✦
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>
+            Session Successfully Finalized
           </div>
-          <div style={{
-            fontFamily: "'Fraunces', serif",
-            fontSize: 'clamp(5rem, 15vw, 8rem)',
-            fontWeight: 600,
-            color,
-            letterSpacing: -4,
-            lineHeight: 1,
-            marginBottom: '0.75rem'
-          }}>
+          <div style={{ fontSize: '6rem', fontWeight: 800, color: color, lineHeight: 1, letterSpacing: '-0.05em', marginBottom: '1rem' }}>
             {score != null ? `${Math.round(score)}%` : '—'}
           </div>
-          <div style={{ fontSize: 14, color: '#8aaa90', fontWeight: 300 }}>
-            {scoreLabel(score)} —{' '}
-            <span style={{ color: '#3a5a42', fontWeight: 500 }}>{session?.exercise_name}</span>
-          </div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)' }}>{scoreLabel(score)}</h1>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            Protocol: <strong>{session?.exercise_name}</strong> • {new Date(session?.start_time || '').toLocaleDateString()}
+          </p>
         </div>
 
-        {/* ── Stats grid ──────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-
-          <div style={S.card}>
-            <div style={S.label}>Accuracy score</div>
-            <div style={{ ...S.statVal, fontSize: '2rem', color }}>
-              {score != null ? `${Math.round(score)}%` : '—'}
-            </div>
-            <div style={{ fontSize: 11, color: '#b5cfb9', marginTop: 6, fontWeight: 300 }}>Overall session score</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div style={S.metricBox}>
+            <div style={S.label}>Precision</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{score != null ? `${Math.round(score)}%` : '—'}</div>
           </div>
-
-          <div style={S.card}>
+          <div style={S.metricBox}>
             <div style={S.label}>Duration</div>
-            <div style={{ ...S.statVal, fontSize: '2rem', color: '#0f1f13' }}>
-              {fmtDuration(session?.duration_seconds ?? 0)}
-            </div>
-            <div style={{ fontSize: 11, color: '#b5cfb9', marginTop: 6, fontWeight: 300 }}>Full session completed ✓</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{fmtDuration(session?.duration_seconds || 0)}</div>
           </div>
-
-          <div style={S.card}>
-            <div style={S.label}>vs last session</div>
-            <div style={{
-              ...S.statVal,
-              fontSize: '2rem',
-              color: diff == null ? '#b5cfb9' : diff >= 0 ? '#1a6640' : '#b06a00'
-            }}>
-              {diff == null ? '—' : `${diff >= 0 ? '+' : ''}${diff}%`}
-            </div>
-            <div style={{ fontSize: 11, color: '#b5cfb9', marginTop: 6, fontWeight: 300 }}>
-              {diff == null ? 'First session' : diff >= 0 ? 'Great improvement!' : 'Keep going!'}
-            </div>
-          </div>
-
-          <div style={S.card}>
-            <div style={S.label}>Status</div>
-            <div style={{
-              ...S.statVal,
-              fontSize: '2rem',
-              color: session?.status === 'completed' ? '#1a6640' : '#b06a00'
-            }}>
-              {session?.status === 'completed' ? 'Done' : 'Pending'}
-            </div>
-            <div style={{ fontSize: 11, color: '#b5cfb9', marginTop: 6, fontWeight: 300 }}>
-              {new Date(session?.start_time ?? '').toLocaleDateString('en-GB', {
-                day: 'numeric', month: 'short', year: 'numeric'
-              })}
+          <div style={S.metricBox}>
+            <div style={S.label}>Trend</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: diff && diff >= 0 ? 'var(--success)' : (diff && diff < 0 ? '#EF4444' : 'inherit') }}>
+              {diff == null ? 'NEW' : `${diff >= 0 ? '+' : ''}${diff}%`}
             </div>
           </div>
         </div>
 
-        {/* ── Accuracy bar ────────────────────────────────────────────────── */}
-        <div style={{ ...S.card, marginBottom: '1.5rem' }}>
-          <div style={S.label}>Score breakdown</div>
+        <div style={S.card}>
+          <div style={{ ...S.label, marginBottom: '1.5rem' }}>Clinical Analysis & Feedback</div>
+          {feedback ? (
+            <div style={{ display: 'flex', gap: '1rem', background: 'var(--bg-medical)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+              <div style={{ background: 'rgba(0,119,182,0.1)', color: 'var(--primary)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div>
+                <p style={{ fontSize: '15px', lineHeight: 1.6, color: 'var(--text-primary)', margin: 0 }}>{feedback.comment}</p>
+                <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>COACH SCORE:</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>{feedback.score} / 10</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', background: 'var(--bg-medical)', borderRadius: '6px', border: '1px dashed var(--border)', color: 'var(--text-secondary)' }}>
+              AI refinement of session data still in progress.
+            </div>
+          )}
 
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#5a7a62', marginBottom: 6 }}>
-              <span>Accuracy</span>
-              <span>{score != null ? `${Math.round(score)}%` : '—'}</span>
-            </div>
-            <div style={{ height: 10, background: '#e8f4ec', borderRadius: 100, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${score ?? 0}%`, background: color, borderRadius: 100, transition: 'width 1s ease' }} />
-            </div>
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8aaa90', marginBottom: 6 }}>
-              <span>Room to improve</span>
-              <span>{score != null ? `${Math.round(100 - score)}%` : '—'}</span>
-            </div>
-            <div style={{ height: 10, background: '#e8f4ec', borderRadius: 100, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${score != null ? 100 - score : 0}%`, background: '#f5c4a0', borderRadius: 100, transition: 'width 1s ease' }} />
-            </div>
+          <div style={{ marginTop: '2.5rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '1rem' }}>
+            <button 
+              style={{ ...S.btnSecondary, flex: 1 }}
+              onClick={() => { localStorage.removeItem('active_session'); router.push('/dashboard'); }}
+            >
+              Return to Dashboard
+            </button>
+            <button 
+              style={{ ...S.btnPrimary, flex: 1 }}
+              onClick={() => { localStorage.removeItem('active_session'); router.push('/select-exercise'); }}
+            >
+              Start New Protocol
+            </button>
           </div>
         </div>
 
-        {/* ── AI Feedback ─────────────────────────────────────────────────── */}
-        {feedback ? (
-          <div style={{
-            ...S.card,
-            marginBottom: '1.5rem',
-            background: score != null && score >= 75 ? '#f0f9f3' : '#fef8f0',
-            borderColor: score != null && score >= 75 ? '#c3d9c7' : '#f5c4a0',
-          }}>
-            <div style={S.label}>💡 AI feedback</div>
-            <p style={{ fontSize: 14, color, lineHeight: 1.7, fontWeight: 300, marginBottom: 10 }}>
-              {feedback.comment}
-            </p>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: score != null && score >= 75 ? '#e8f4ec' : '#fef3e2',
-              padding: '4px 12px', borderRadius: 100,
-              fontSize: 11, color, fontWeight: 500,
-            }}>
-              Feedback score: {feedback.score} / 10
-            </div>
-          </div>
-        ) : (
-          <div style={{ ...S.card, marginBottom: '1.5rem', background: '#f7f9f7', borderStyle: 'dashed' }}>
-            <div style={S.label}>💡 AI feedback</div>
-            <p style={{ fontSize: 13, color: '#8aaa90', fontWeight: 300 }}>
-              No feedback recorded for this session yet.
-            </p>
-          </div>
-        )}
-
-        {/* ── Actions ─────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => {
-              localStorage.removeItem('active_session');
-              router.push('/duration');
-            }}
-            style={{
-              flex: 1, minWidth: 140,
-              background: '#f7f9f7', color: '#3a5a42',
-              border: '1px solid #c3d9c7',
-              padding: 13, borderRadius: 100,
-              fontSize: 14, fontWeight: 500,
-              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-            }}
-          >
-            ↩ Retry
-          </button>
-          <button
-            onClick={() => {
-              localStorage.removeItem('active_session');
-              router.push('/dashboard');
-            }}
-            style={{
-              flex: 1, minWidth: 140,
-              background: '#1a6640', color: '#fff',
-              border: 'none',
-              padding: 13, borderRadius: 100,
-              fontSize: 14, fontWeight: 500,
-              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-            }}
-          >
-            Dashboard →
-          </button>
-        </div>
-
+        <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '12px', color: 'var(--text-secondary)' }}>
+          This data has been synchronized with your medical profile for further tracking.
+        </p>
       </main>
     </div>
   );
