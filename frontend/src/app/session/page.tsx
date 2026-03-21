@@ -31,18 +31,24 @@ export default function SessionRedirect() {
       height: '100vh', 
       backgroundColor: 'var(--bg-medical)',
       color: 'var(--text-secondary)',
-      gap: '1rem'
+      gap: '1.5rem'
     }}>
       <div style={{ 
-        width: '24px', 
-        height: '24px', 
-        border: '2px solid var(--border)', 
+        width: '32px', 
+        height: '32px', 
+        border: '3px solid var(--border)', 
         borderTopColor: 'var(--primary)', 
         borderRadius: '50%',
-        animation: 'spin 0.6s linear infinite'
+        animation: 'spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite'
       }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <span style={{ fontSize: '14px', fontWeight: 500 }}>Redirecting to active protocol...</span>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+      `}</style>
+      <div style={{ textAlign: 'center' }}>
+        <span style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Securing Clinical Link...</span>
+        <span style={{ display: 'block', fontSize: '12px', fontWeight: 400 }}>Redirecting to active protocol</span>
+      </div>
     </div>
   );
 }

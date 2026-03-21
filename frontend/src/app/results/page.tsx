@@ -12,6 +12,7 @@ interface SessionResult {
   duration_seconds: number;
   accuracy_score: number | null;
   status: string;
+  feedback?: Feedback | null;
 }
 
 interface Feedback {
@@ -23,9 +24,7 @@ interface Feedback {
 
 function scoreColor(score: number | null) {
   if (score == null) return 'var(--text-secondary)';
-  if (score >= 85) return 'var(--success)';
-  if (score >= 70) return 'var(--primary)';
-  return '#F59E0B';
+  return score > 50 ? 'var(--success)' : '#EF4444';
 }
 
 function scoreLabel(score: number | null) {
@@ -73,10 +72,8 @@ export default function ResultsPage() {
         if (!current) throw new Error('Session record not found');
         setSession(current);
 
-        const fbRes = await fetch(`${API}/feedback/${active.session_id}`, { headers });
-        if (fbRes.ok) {
-          const fbData: Feedback[] = await fbRes.json();
-          if (fbData.length > 0) setFeedback(fbData[0]);
+        if (current.feedback) {
+          setFeedback(current.feedback);
         }
 
         const others = allSessions
@@ -105,12 +102,24 @@ export default function ResultsPage() {
       flexDirection: 'column' as const,
     },
     nav: {
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      padding: '1rem 2rem',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
+      padding: '0.75rem 2rem',
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      position: 'sticky' as const,
+      top: 0,
+      zIndex: 10,
+    },
+    logo: {
+      fontWeight: 600,
+      fontSize: '1.25rem',
+      color: 'var(--primary)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      cursor: 'pointer',
     },
     main: {
       maxWidth: '800px',
@@ -149,7 +158,8 @@ export default function ResultsPage() {
       fontSize: '14px',
       fontWeight: 600,
       cursor: 'pointer',
-      transition: 'all 0.2s',
+      transition: 'opacity 0.2s',
+      flex: 1,
     },
     btnSecondary: {
       background: 'var(--surface)',
@@ -161,6 +171,7 @@ export default function ResultsPage() {
       fontWeight: 600,
       cursor: 'pointer',
       transition: 'all 0.2s',
+      flex: 1,
     }
   };
 
@@ -172,16 +183,20 @@ export default function ResultsPage() {
     </div>
   );
 
+  const CrossIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
+
   return (
     <div style={S.page}>
       <nav style={S.nav}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-          </svg>
+        <div style={S.logo} onClick={() => router.push('/')}>
+          <CrossIcon />
           <span>PoseCorrect</span>
         </div>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-medical)', padding: '4px 12px', borderRadius: '100px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', background: 'rgba(0,119,182,0.05)', padding: '6px 14px', borderRadius: '100px', border: '1px solid var(--border)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Final Report: {session?.exercise_name}
         </div>
       </nav>
@@ -230,7 +245,7 @@ export default function ResultsPage() {
                 <p style={{ fontSize: '15px', lineHeight: 1.6, color: 'var(--text-primary)', margin: 0 }}>{feedback.comment}</p>
                 <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>COACH SCORE:</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>{feedback.score} / 10</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>{feedback.score}%</div>
                 </div>
               </div>
             </div>
@@ -242,14 +257,18 @@ export default function ResultsPage() {
 
           <div style={{ marginTop: '2.5rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '1rem' }}>
             <button 
-              style={{ ...S.btnSecondary, flex: 1 }}
+              style={S.btnSecondary}
               onClick={() => { localStorage.removeItem('active_session'); router.push('/dashboard'); }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-medical)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
             >
               Return to Dashboard
             </button>
             <button 
-              style={{ ...S.btnPrimary, flex: 1 }}
+              style={S.btnPrimary}
               onClick={() => { localStorage.removeItem('active_session'); router.push('/select-exercise'); }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
             >
               Start New Protocol
             </button>

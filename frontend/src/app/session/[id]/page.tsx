@@ -219,14 +219,27 @@ export default function SessionPage() {
     page: {
       backgroundColor: 'var(--bg-medical)',
       minHeight: '100vh',
+      color: 'var(--text-primary)',
     },
     nav: {
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      padding: '0.75rem 2rem',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
+      padding: '0.75rem 2rem',
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      position: 'sticky' as const,
+      top: 0,
+      zIndex: 10,
+    },
+    logo: {
+      fontWeight: 600,
+      fontSize: '1.25rem',
+      color: 'var(--primary)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      cursor: 'pointer',
     },
     main: {
       maxWidth: '1200px',
@@ -238,11 +251,12 @@ export default function SessionPage() {
     },
     camWrap: {
       background: '#000',
-      borderRadius: '8px',
+      borderRadius: '12px',
       overflow: 'hidden',
       position: 'relative' as const,
       aspectRatio: '16/9',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+      border: '1px solid var(--border)',
     },
     sidebar: {
       display: 'flex',
@@ -268,8 +282,26 @@ export default function SessionPage() {
       fontSize: '2rem',
       fontWeight: 700,
       color: 'var(--text-primary)',
+    },
+    btnPrimary: {
+      background: 'var(--primary)',
+      color: '#fff',
+      border: 'none',
+      padding: '14px',
+      borderRadius: '6px',
+      fontSize: '15px',
+      fontWeight: 600,
+      cursor: 'pointer',
+      width: '100%',
+      transition: 'opacity 0.2s',
     }
   };
+
+  const CrossIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
 
   return (
     <>
@@ -280,15 +312,16 @@ export default function SessionPage() {
         `}</style>
         
         <nav style={S.nav}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem' }}>PoseCorrect</div>
-            <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+          <div style={S.logo} onClick={() => router.push('/')}>
+            <CrossIcon />
+            <span>PoseCorrect</span>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 12px' }} />
             <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>{config?.exercise_name}</div>
           </div>
           {pageStatus === 'running' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239,68,68,0.1)', padding: '6px 12px', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239,68,68,0.08)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(239,68,68,0.2)' }}>
               <div className="live-indicator" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444' }} />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#EF4444', textTransform: 'uppercase' }}>Session in Progress</span>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session Live Analysis</span>
             </div>
           )}
         </nav>
@@ -332,6 +365,24 @@ export default function SessionPage() {
           <aside style={S.sidebar}>
             <div style={S.card}>
               <div style={S.metricLabel}>Correction Score</div>
+              
+              {/* Conditional Score Line */}
+              <div style={{ 
+                height: '4px', 
+                width: '100%', 
+                background: 'var(--border)', 
+                borderRadius: '2px', 
+                margin: '4px 0 12px 0', 
+                overflow: 'hidden' 
+              }}>
+                <div style={{ 
+                  height: '100%', 
+                  width: result ? `${Math.min(100, Math.max(0, result.accuracy_score))}%` : '0%', 
+                  background: result ? (result.accuracy_score > 50 ? 'var(--success)' : '#EF4444') : 'var(--border)',
+                  transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease'
+                }} />
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                 <div style={S.metricValue}>{result ? `${Math.round(result.accuracy_score)}%` : '—'}</div>
                 <div style={{ fontSize: '12px', fontWeight: 600, color: result?.is_correct ? 'var(--success)' : '#EF4444' }}>
@@ -374,7 +425,9 @@ export default function SessionPage() {
             {pageStatus === 'ready' && (
               <button 
                 onClick={startSession}
-                style={{ background: 'var(--primary)', color: '#fff', border: 'none', padding: '14px', borderRadius: '6px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: 'auto' }}
+                style={S.btnPrimary}
+                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
               >
                 Launch Protocol
               </button>

@@ -1,5 +1,3 @@
-# tests/test_endpoints.py
-
 import os
 import sys
 
@@ -21,7 +19,7 @@ SQLALCHEMY_TEST_URL = "sqlite:///./test.db"
 
 engine = create_engine(
     SQLALCHEMY_TEST_URL,
-    connect_args={"check_same_thread": False},  # needed for SQLite only
+    connect_args={"check_same_thread": False}, 
 )
 TestingSession = sessionmaker(bind=engine)
 

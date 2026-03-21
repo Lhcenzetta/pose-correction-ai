@@ -133,6 +133,12 @@ export default function PoseGuide({
     );
   }
 
+  const CrossIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
+
   return (
     <div style={S.overlay}>
       <nav style={S.nav}>
@@ -145,10 +151,8 @@ export default function PoseGuide({
           </svg>
           Back
         </button>
-        <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-          </svg>
+        <div style={{ fontWeight: 600, fontSize: '1.25rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CrossIcon />
           <span>PoseCorrect</span>
         </div>
         <div style={{ width: '80px' }} />

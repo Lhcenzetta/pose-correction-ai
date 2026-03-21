@@ -133,7 +133,7 @@ export default function HomePage() {
 
   const CrossIcon = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 
@@ -204,7 +204,6 @@ export default function HomePage() {
           {[
             ['33', 'Keypoints'],
             ['98%', 'Accuracy'],
-            ['50+', 'Exercises'],
             ['Live', 'Feedback']
           ].map(([val, label]) => (
             <div key={label}>
@@ -226,7 +225,7 @@ export default function HomePage() {
           <div key={title} style={S.card}>
             <div style={{ color: 'var(--primary)', marginBottom: '1rem' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
             </div>
             <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>{title}</h3>
@@ -244,10 +243,6 @@ export default function HomePage() {
           <button style={S.btnSecondary} onClick={() => router.push('/login')}>Learn More</button>
         </div>
       </section>
-
-      <footer style={S.footer}>
-        © 2024 PoseCorrect Healthcare Technologies. All rights reserved. Professional Use Only.
-      </footer>
     </div>
   );
 }
