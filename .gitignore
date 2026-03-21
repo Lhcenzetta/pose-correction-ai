@@ -1,0 +1,14 @@
+dataset
+dataset
+visualize_output
+data-csv
+.env
+__pycache__
+*.pyc
+index.html
+__pycache__ 
+.pytest_cache
+__pycache__
+test.db
+.dockerignore
+init.sql
