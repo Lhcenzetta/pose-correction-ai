@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from routers import manage_session, select_exercice, authontification
+import os
+from routers import manage_session, select_exercice, authentication
 from db.database import engine, Base
 from models.user import User
 from models.session import Session
@@ -9,13 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-Base.metadata.create_all(bind=engine)
+# Only create tables if not running in a test environment
+if os.getenv("TESTING") != "true":
+    Base.metadata.create_all(bind=engine)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(authontification.router)
+app.include_router(authentication.router)
 app.include_router(manage_session.router)
 app.include_router(select_exercice.router)

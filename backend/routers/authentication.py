@@ -58,7 +58,7 @@ def get_current_user(
     return user
 
 
-@router.post("/Signup")
+@router.post("/Signup", status_code=status.HTTP_201_CREATED)
 def create_account(user: UserSchema.CreateUser, db: Session = Depends(get_db)):
     exist_user = db.query(User).filter(User.email == user.email).first()
     if exist_user:

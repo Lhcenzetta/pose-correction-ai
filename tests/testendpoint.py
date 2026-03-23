@@ -11,7 +11,31 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from unittest.mock import patch, MagicMock
 
-from main import app
+# Set TESTING environment variable before importing app
+import os
+os.environ["TESTING"] = "true"
+
+# Mock dependencies to avoid ModuleNotFoundError and PackageNotFoundError when importing manage_session
+import sys
+from unittest.mock import patch, MagicMock
+
+sys.modules["tensorflow"] = MagicMock()
+
+# Mock email_validator more realistically
+mock_ev = MagicMock()
+def mock_validate(email, **kwargs):
+    m = MagicMock()
+    m.normalized = email
+    return m
+mock_ev.validate_email = mock_validate
+sys.modules["email_validator"] = mock_ev
+
+# Mock importlib.metadata.version for pydantic
+import pydantic.networks
+with patch("pydantic.networks.version", return_value="2.0.0"), \
+     patch("tensorflow.keras.models.load_model", MagicMock()), \
+     patch("pickle.load", return_value=MagicMock()):
+    from main import app
 from db.database import get_db, Base
 from models.user import User
 
@@ -19,7 +43,7 @@ SQLALCHEMY_TEST_URL = "sqlite:///./test.db"
 
 engine = create_engine(
     SQLALCHEMY_TEST_URL,
-    connect_args={"check_same_thread": False}, 
+    connect_args={"check_same_thread": False},
 )
 TestingSession = sessionmaker(bind=engine)
 

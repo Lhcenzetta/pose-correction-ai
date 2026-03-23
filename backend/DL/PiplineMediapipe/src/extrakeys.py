@@ -6,8 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 
-
-MODEL_PATH = "/Users/lait-zet/Desktop/pose-correction-ai/mediapip3/pose_landmarker.task"  
+MODEL_PATH = "/Users/lait-zet/Desktop/pose-correction-ai/mediapip3/pose_landmarker.task"
 DATASET_DIR = "/Users/lait-zet/Desktop/pose-correction-ai/mediapip3/dataset"
 OUTPUT_CSV = "keypoints_dataset.csv"
 
@@ -61,7 +60,7 @@ def extract_features(image_path):
         if idx < len(lms):
             keypoints.extend([lms[idx].x, lms[idx].y, lms[idx].z])
         else:
-            keypoints.extend([0.0, 0.0, 0.0])  
+            keypoints.extend([0.0, 0.0, 0.0])
 
     def get_xy(idx):
         return (lms[idx].x, lms[idx].y) if idx < len(lms) else (0.0, 0.0)
@@ -79,7 +78,7 @@ def extract_features(image_path):
     left_abduction = calc_angle(l_hip, l_shoulder, l_elbow)
     right_abduction = calc_angle(r_hip, r_shoulder, r_elbow)
     angles = [left_elbow_angle, right_elbow_angle, left_abduction, right_abduction]
-    return keypoints + angles 
+    return keypoints + angles
 
 
 rows = []

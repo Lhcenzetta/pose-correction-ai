@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from schema.Exerciceschema import ExerciseCreate, ExerciseBase, ExerciseResponse
-from routers.authontification import get_current_user, verfiy_token
+from routers.authentication import get_current_user, verfiy_token
 from db.database import get_db
 from schema import UserSchema
 from models.exercices import Exercice
