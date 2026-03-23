@@ -1,28 +1,21 @@
 import os
 import sys
-
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../backend"))
-)
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from unittest.mock import patch, MagicMock
-
-# Set TESTING environment variable before importing app
 import os
-
-os.environ["TESTING"] = "true"
-
-# Mock dependencies to avoid ModuleNotFoundError and PackageNotFoundError when importing manage_session
 import sys
 from unittest.mock import patch, MagicMock
+import pydantic.networks
 
+os.environ["TESTING"] = "true"
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../backend"))
+)
 sys.modules["tensorflow"] = MagicMock()
 
-# Mock email_validator more realistically
 mock_ev = MagicMock()
 
 
@@ -34,9 +27,6 @@ def mock_validate(email, **kwargs):
 
 mock_ev.validate_email = mock_validate
 sys.modules["email_validator"] = mock_ev
-
-# Mock importlib.metadata.version for pydantic
-import pydantic.networks
 
 with patch("pydantic.networks.version", return_value="2.0.0"), patch(
     "tensorflow.keras.models.load_model", MagicMock()
@@ -70,10 +60,9 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def reset_db():
-    Base.metadata.create_all(bind=engine)  # create tables
-    yield  # run the test
-    Base.metadata.drop_all(bind=engine)  # clean up after
-
+    Base.metadata.create_all(bind=engine)  
+    yield  
+    Base.metadata.drop_all(bind=engine)  
 
 def test_signup_success():
     response = client.post(
@@ -85,13 +74,12 @@ def test_signup_success():
             "password": "secret123",
         },
     )
-    # Assert means "check that this is true"
+  
     assert response.status_code == 201
     assert response.json()["email"] == "lahcen@test.com"
 
 
 def test_signup_duplicate_email():
-    # First signup
     client.post(
         "/Signup",
         json={
@@ -101,7 +89,6 @@ def test_signup_duplicate_email():
             "password": "secret123",
         },
     )
-    # Second signup with same email — should fail
     response = client.post(
         "/Signup",
         json={
@@ -116,7 +103,6 @@ def test_signup_duplicate_email():
 
 
 def test_login_success():
-    # First create the user
     client.post(
         "/Signup",
         json={
@@ -126,12 +112,11 @@ def test_login_success():
             "password": "secret123",
         },
     )
-    # Then login
     response = client.post(
         "/login", json={"email": "lahcen@test.com", "password": "secret123"}
     )
     assert response.status_code == 200
-    assert "access_token" in response.json()  # token exists
+    assert "access_token" in response.json() 
     assert response.json()["token_type"] == "bearer"
 
 
@@ -152,7 +137,6 @@ def test_login_wrong_password():
 
 
 def test_get_me():
-    # Create + login to get a real token
     client.post(
         "/Signup",
         json={
@@ -167,7 +151,7 @@ def test_get_me():
     )
     token = login.json()["access_token"]
 
-    # Use that token in the Authorization header
+    
     response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["email"] == "lahcen@test.com"

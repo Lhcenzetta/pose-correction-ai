@@ -7,12 +7,8 @@ sys.path.insert(
 
 import db.database
 from unittest.mock import patch, MagicMock
-
-# Mock dependencies to avoid ModuleNotFoundError when importing manage_session
 sys.modules["tensorflow"] = MagicMock()
 sys.modules["email_validator"] = MagicMock()
-
-# Mock pydantic version check
 import pydantic.networks
 
 import builtins
@@ -34,7 +30,7 @@ def test_model_loads_successfully():
 
         mock_load.return_value = MagicMock()
 
-        # Mock environment variables
+       
         with patch.dict(
             os.environ, {"shoulder_model": "fake_model.h5", "scale": "fake_scale.pkl"}
         ):
@@ -43,7 +39,7 @@ def test_model_loads_successfully():
 
             importlib.reload(session_router)
 
-            # Now call the lazy loader
+        
             model, scaler = session_router.get_model_and_scaler()
 
             assert mock_load.called
