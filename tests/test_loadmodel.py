@@ -16,6 +16,7 @@ sys.modules["email_validator"] = MagicMock()
 import pydantic.networks
 
 import builtins
+
 real_open = builtins.open
 
 
@@ -25,19 +26,23 @@ def test_model_loads_successfully():
             return MagicMock()
         return real_open(file, *args, **kwargs)
 
-    with patch("tensorflow.keras.models.load_model") as mock_load, \
-         patch("pickle.load", return_value=MagicMock()) as mock_scaler, \
-         patch("builtins.open", side_effect=mock_open), \
-         patch("pydantic.networks.version", return_value="2.0.0"):
+    with patch("tensorflow.keras.models.load_model") as mock_load, patch(
+        "pickle.load", return_value=MagicMock()
+    ) as mock_scaler, patch("builtins.open", side_effect=mock_open), patch(
+        "pydantic.networks.version", return_value="2.0.0"
+    ):
 
         mock_load.return_value = MagicMock()
 
         # Mock environment variables
-        with patch.dict(os.environ, {"shoulder_model": "fake_model.h5", "scale": "fake_scale.pkl"}):
+        with patch.dict(
+            os.environ, {"shoulder_model": "fake_model.h5", "scale": "fake_scale.pkl"}
+        ):
             import routers.manage_session as session_router
             import importlib
+
             importlib.reload(session_router)
-            
+
             # Now call the lazy loader
             model, scaler = session_router.get_model_and_scaler()
 

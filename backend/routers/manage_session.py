@@ -46,6 +46,11 @@ def get_model_and_scaler():
     return model, scaler
 
 
+_pred_buffers: dict[int, deque] = {}
+_session_metrics: dict[int, dict] = {}
+_lock = threading.Lock()
+
+
 def run_inference(session_id: int, features: list[float]):
     current_model, current_scaler = get_model_and_scaler()
     feat_scaled = current_scaler.transform(np.array(features).reshape(1, -1))
