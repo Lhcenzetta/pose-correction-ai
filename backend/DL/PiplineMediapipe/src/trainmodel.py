@@ -13,10 +13,9 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping
 
-
 df = pd.read_csv("keypoints_dataset.csv")
-X = df.drop("label", axis=1).values 
-y = df["label"].values  
+X = df.drop("label", axis=1).values
+y = df["label"].values
 
 
 X_train, X_test, y_train, y_test = train_test_split(

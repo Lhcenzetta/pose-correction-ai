@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import mlflow
 from models.feedback import Feedback
-from routers.authontification import get_current_user
+from routers.authentication import get_current_user
 from schema.Sessionschema import SessionCreate, SessionResponse, PoseFeatures
 from models.user import User
 from models.exercices import Exercice
@@ -20,18 +20,36 @@ from db.database import get_db
 router = APIRouter()
 
 
-model = tf.keras.models.load_model(os.getenv("shoulder_model"))
-with open(os.getenv("scale"), "rb") as f:
-    scaler = pickle.load(f)
+# Lazy loading of model and scaler to avoid import-time crashes and improve testability
+model = None
+scaler = None
 
-_pred_buffers: dict[int, deque] = {}
-_session_metrics: dict[int, dict] = {}
-_lock = threading.Lock()
+
+def get_model_and_scaler():
+    global model, scaler
+    if model is None:
+        model_path = os.getenv("shoulder_model")
+        if model_path:
+            model = tf.keras.models.load_model(model_path)
+        else:
+            # Fallback or error if model path is missing
+            raise RuntimeError("Environment variable 'shoulder_model' is not set.")
+
+    if scaler is None:
+        scaler_path = os.getenv("scale")
+        if scaler_path:
+            with open(scaler_path, "rb") as f:
+                scaler = pickle.load(f)
+        else:
+            raise RuntimeError("Environment variable 'scale' is not set.")
+
+    return model, scaler
 
 
 def run_inference(session_id: int, features: list[float]):
-    feat_scaled = scaler.transform(np.array(features).reshape(1, -1))
-    raw_conf = float(model.predict(feat_scaled, verbose=0)[0][0])
+    current_model, current_scaler = get_model_and_scaler()
+    feat_scaled = current_scaler.transform(np.array(features).reshape(1, -1))
+    raw_conf = float(current_model.predict(feat_scaled, verbose=0)[0][0])
 
     with _lock:
         if session_id not in _pred_buffers:
@@ -244,7 +262,7 @@ def get_user_sessions(
     return result
 
 
-@router.delete("/{session_id} delette session", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_session(
     session_id: int,
     db: Session = Depends(get_db),
