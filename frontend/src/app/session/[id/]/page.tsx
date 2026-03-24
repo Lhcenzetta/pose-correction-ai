@@ -41,7 +41,7 @@ export default function SessionPage() {
   const [pageStatus, setPageStatus] = useState<'loading' | 'ready' | 'running'>('loading');
   const [error, setError] = useState('');
 
-  // ── Load external scripts ──────────────────────────────────────
+
   function loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
@@ -54,7 +54,7 @@ export default function SessionPage() {
     });
   }
 
-  // ── Finalize → redirect to results ────────────────────────────
+ 
   const finalizeSession = useCallback(async (sid: number) => {
     const token = localStorage.getItem('access_token');
     try {

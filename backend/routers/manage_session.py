@@ -19,8 +19,6 @@ from db.database import get_db
 
 router = APIRouter()
 
-
-# Lazy loading of model and scaler to avoid import-time crashes and improve testability
 model = None
 scaler = None
 
@@ -32,8 +30,8 @@ def get_model_and_scaler():
         if model_path:
             model = tf.keras.models.load_model(model_path)
         else:
-            # Fallback or error if model path is missing
-            raise RuntimeError("Environment variable 'shoulder_model' is not set.")
+           
+            raise RuntimeError("error model")
 
     if scaler is None:
         scaler_path = os.getenv("scale")
@@ -41,7 +39,7 @@ def get_model_and_scaler():
             with open(scaler_path, "rb") as f:
                 scaler = pickle.load(f)
         else:
-            raise RuntimeError("Environment variable 'scale' is not set.")
+            raise RuntimeError("error scale")
 
     return model, scaler
 
@@ -189,7 +187,6 @@ def finalize_session(
     session.status = "completed"
     session.end_time = datetime.utcnow()
 
-    # Log to MLflow
     try:
         mlflow.set_tracking_uri(
             os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
