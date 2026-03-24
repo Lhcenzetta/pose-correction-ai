@@ -60,9 +60,10 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def reset_db():
-    Base.metadata.create_all(bind=engine)  
-    yield  
-    Base.metadata.drop_all(bind=engine)  
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
+
 
 def test_signup_success():
     response = client.post(
@@ -74,7 +75,7 @@ def test_signup_success():
             "password": "secret123",
         },
     )
-  
+
     assert response.status_code == 201
     assert response.json()["email"] == "lahcen@test.com"
 
@@ -116,7 +117,7 @@ def test_login_success():
         "/login", json={"email": "lahcen@test.com", "password": "secret123"}
     )
     assert response.status_code == 200
-    assert "access_token" in response.json() 
+    assert "access_token" in response.json()
     assert response.json()["token_type"] == "bearer"
 
 
@@ -151,7 +152,6 @@ def test_get_me():
     )
     token = login.json()["access_token"]
 
-    
     response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["email"] == "lahcen@test.com"

@@ -30,7 +30,7 @@ def get_model_and_scaler():
         if model_path:
             model = tf.keras.models.load_model(model_path)
         else:
-           
+
             raise RuntimeError("error model")
 
     if scaler is None:
