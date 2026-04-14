@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Only create tables if not running in a test environment
 if os.getenv("TESTING") != "true":
     Base.metadata.create_all(bind=engine)
 app.add_middleware(
