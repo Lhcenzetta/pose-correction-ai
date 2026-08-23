@@ -2,7 +2,6 @@
 
 `PoseCorrect` is a professional, AI-driven application designed to help users perform physical therapy and fitness exercises with perfect form. By leveraging real-time pose estimation and deep learning classification, the app provides instant, clinical-grade feedback to ensure safety and maximize the effectiveness of every movement.
 
----
 
 ## 🚀 Key Features
 
